@@ -3,28 +3,52 @@
     {
       "MainCategory": "Live TV",
       "SubCategories": [
-        "Entertainment"
+        ""
       ],
       "Entries": [
         {
-          "Title": "Az2",
-          "SubCategory": "Entertainment",
+          "Title": "",
+          "SubCategory": "",
           "Country": "",
-          "Description": "Live TV",
-          "Poster": "https://i.imgur.com/1zsdloF.png",
-          "Thumbnail": "https://i.imgur.com/1zsdloF.png",
-          "Rating": 8,
+          "Description": "",
+          "Poster": "",
+          "Thumbnail": "",
+          "Rating": ,
           "Servers": [
+            {
+              "name": "mpd",
+              "url": "http://example.com/stream.mpd"
+            },
+            {
+              "name": "hls",
+              "url": "http://example.com/stream.hls"
+            },
+            {
+              "name": "m3u8",
+              "url": "http://example.com/stream.m3u8"
+            },
             {
               "name": "4k",
               "url": "http://example.com/stream.m3u8"
+            },
+            {
+              "name": "1080p",
+              "url": "sample.com"
             },
             {
               "name": "720p",
               "url": "sample.com"
             },
             {
-              "name": "nxnx",
+              "name": "480p",
+              "url": "sample.com"
+            },
+            {
+              "name": "320p",
+              "url": "sample.com"
+            },
+            {
+              "name": "240p",
               "url": "dnnd"
             }
           ]
@@ -49,12 +73,44 @@
           "Year": 1997,
           "Servers": [
             {
+              "name": "4k",
+              "url": "http://example.com/stream.m3u8"
+            },
+            {
+              "name": "1080p",
+              "url": "sample.com"
+            },
+            {
+              "name": "720p",
+              "url": "sample.com"
+            },
+            {
               "name": "480p",
-              "url": "https://youtu.be/vvCzT-8PIho?si=sX0OLUOJg8l2biXx"
+              "url": "sample.com"
+            },
+            {
+              "name": "320p",
+              "url": "sample.com"
+            },
+            {
+              "name": "240",
+              "url": "sample.com"
             },
             {
               "name": "vidsrc",
-              "url": "vidsrc.net"
+              "url": "vidsrc.net/embed tmdb id"
+            },
+            {
+              "name": "vidjoy.pro/embed",
+              "url": "vidjoy.pro/embed tmdb id"
+            },
+            {
+              "name": "google drive",
+              "url": "google drive link"
+            },
+            {
+              "name": "mega.nz",
+              "url": "mega.nz link"
             }
           ]
         }
@@ -89,13 +145,45 @@
                   "Thumbnail": "https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p9161972_b_h9_aa.jpg",
                   "Servers": [
                     {
-                      "name": "480p",
-                      "url": "example.com"
-                    },
-                    {
-                      "name": "320p",
-                      "url": "sample.com"
-                    }
+              "name": "4k",
+              "url": "http://example.com/stream.m3u8"
+            },
+            {
+              "name": "1080p",
+              "url": "sample.com"
+            },
+            {
+              "name": "720p",
+              "url": "sample.com"
+            },
+            {
+              "name": "480p",
+              "url": "sample.com"
+            },
+            {
+              "name": "320p",
+              "url": "sample.com"
+            },
+            {
+              "name": "240",
+              "url": "sample.com"
+            },
+            {
+              "name": "vidsrc",
+              "url": "vidsrc.net/embed tmdb id"
+            },
+            {
+              "name": "vidjoy.pro/embed",
+              "url": "vidjoy.pro/embed tmdb id"
+            },
+            {
+              "name": "google drive",
+              "url": "google drive link"
+            },
+            {
+              "name": "mega.nz",
+              "url": "mega.nz link"
+            }
                   ]
                 },
                 {
@@ -106,9 +194,45 @@
                   "Thumbnail": "",
                   "Servers": [
                     {
-                      "name": "4k",
-                      "url": "sample.com"
-                    }
+              "name": "4k",
+              "url": "http://example.com/stream.m3u8"
+            },
+            {
+              "name": "1080p",
+              "url": "sample.com"
+            },
+            {
+              "name": "720p",
+              "url": "sample.com"
+            },
+            {
+              "name": "480p",
+              "url": "sample.com"
+            },
+            {
+              "name": "320p",
+              "url": "sample.com"
+            },
+            {
+              "name": "240",
+              "url": "sample.com"
+            },
+            {
+              "name": "vidsrc",
+              "url": "vidsrc.net/embed tmdb id"
+            },
+            {
+              "name": "vidjoy.pro/embed",
+              "url": "vidjoy.pro/embed tmdb id"
+            },
+            {
+              "name": "google drive",
+              "url": "google drive link"
+            },
+            {
+              "name": "mega.nz",
+              "url": "mega.nz link"
+            }
                   ]
                 }
               ]
@@ -125,13 +249,45 @@
                   "Thumbnail": "",
                   "Servers": [
                     {
-                      "name": "1080",
-                      "url": "sample.com"
-                    },
-                    {
-                      "name": "720p",
-                      "url": "sample.com"
-                    }
+              "name": "4k",
+              "url": "http://example.com/stream.m3u8"
+            },
+            {
+              "name": "1080p",
+              "url": "sample.com"
+            },
+            {
+              "name": "720p",
+              "url": "sample.com"
+            },
+            {
+              "name": "480p",
+              "url": "sample.com"
+            },
+            {
+              "name": "320p",
+              "url": "sample.com"
+            },
+            {
+              "name": "240",
+              "url": "sample.com"
+            },
+            {
+              "name": "vidsrc",
+              "url": "vidsrc.net/embed tmdb id"
+            },
+            {
+              "name": "vidjoy.pro/embed",
+              "url": "vidjoy.pro/embed tmdb id"
+            },
+            {
+              "name": "google drive",
+              "url": "google drive link"
+            },
+            {
+              "name": "mega.nz",
+              "url": "mega.nz link"
+            }
                   ]
                 }
               ]
