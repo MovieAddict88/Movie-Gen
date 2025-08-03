@@ -507,16 +507,35 @@
                 <h2>✏️ Manual Content Input</h2>
                 <div class="grid">
                     <div class="form-group">
-                        <label>Content Type</label>
-                        <select id="manual-type" onchange="toggleManualFields()">
-                            <option value="movie">Movie</option>
-                            <option value="series">TV Series</option>
-                            <option value="live">Live TV</option>
+                        <label>Main Category</label>
+                        <select id="manual-category" onchange="updateSubCategories()">
+                            <option value="Movies">Movies</option>
+                            <option value="TV Series">TV Series</option>
+                            <option value="Live TV">Live TV</option>
                         </select>
                     </div>
                     <div class="form-group">
+                        <label>Sub Category</label>
+                        <select id="manual-subcategory">
+                            <option value="Action">Action</option>
+                            <option value="Comedy">Comedy</option>
+                            <option value="Drama">Drama</option>
+                            <option value="Horror">Horror</option>
+                            <option value="Romance">Romance</option>
+                            <option value="Sci-Fi">Sci-Fi</option>
+                            <option value="Thriller">Thriller</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid">
+                    <div class="form-group">
                         <label>Title</label>
                         <input type="text" id="manual-title" placeholder="Content title">
+                    </div>
+                    <div class="form-group">
+                        <label>Country</label>
+                        <input type="text" id="manual-country" placeholder="Country of origin">
                     </div>
                 </div>
                 
@@ -526,8 +545,19 @@
                         <textarea id="manual-description" rows="4" placeholder="Content description"></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Image/Poster URL</label>
-                        <input type="url" id="manual-image" placeholder="https://...">
+                        <label>Poster URL</label>
+                        <input type="url" id="manual-poster" placeholder="https://...">
+                    </div>
+                </div>
+                
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Thumbnail URL</label>
+                        <input type="url" id="manual-thumbnail" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label>Duration (for TV Series episodes)</label>
+                        <input type="text" id="manual-duration" placeholder="2:00:00">
                     </div>
                 </div>
 
@@ -543,35 +573,46 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Video Sources</label>
-                    <div id="manual-sources" class="server-list">
+                    <label>Servers (Auto-detect: VidSrc & VidJoy for TMDB IDs, YouTube for trailers)</label>
+                    <div id="manual-servers" class="server-list">
                         <div class="server-item">
-                            <input type="text" placeholder="Source Name" class="source-name">
-                            <input type="url" placeholder="Video URL" class="source-url">
-                            <select class="source-type">
-                                <option value="video">Direct Video</option>
-                                <option value="embed">Embedded</option>
-                                <option value="youtube">YouTube</option>
-                                <option value="live">Live Stream</option>
-                            </select>
-                            <select class="source-quality">
-                                <option value="1080p">1080p</option>
-                                <option value="720p">720p</option>
-                                <option value="480p">480p</option>
-                                <option value="Auto">Auto</option>
-                            </select>
+                            <input type="text" placeholder="Server Name (e.g., 1080p, 720p, vidsrc, vidjoy.pro/embed)" class="server-name">
+                            <input type="text" placeholder="URL or TMDB ID (for vidsrc/vidjoy)" class="server-url">
                             <button class="btn btn-danger btn-small" onclick="removeServer(this)">Remove</button>
                         </div>
                     </div>
-                    <button class="btn btn-secondary btn-small" onclick="addManualSource()">+ Add Source</button>
+                    <button class="btn btn-secondary btn-small" onclick="addManualServer()">+ Add Server</button>
+                    <div style="margin-top: 10px; font-size: 0.9em; color: var(--text-secondary);">
+                        <strong>Auto-detection:</strong><br>
+                        • VidSrc: Enter TMDB ID for "vidsrc" server name<br>
+                        • VidJoy: Enter TMDB ID for "vidjoy.pro/embed" server name<br>
+                        • YouTube: Will auto-detect trailers when using TMDB Generator<br>
+                        • Other servers: Enter full URL manually
+                    </div>
                 </div>
 
                 <div id="series-fields" style="display: none;">
                     <div class="form-group">
-                        <label>Number of Seasons</label>
-                        <input type="number" id="manual-seasons" min="1" onchange="generateSeasonFields()">
+                        <label>Seasons Configuration</label>
+                        <div id="seasons-container">
+                            <div class="season-item">
+                                <h4>Season 1</h4>
+                                <div class="grid">
+                                    <div class="form-group">
+                                        <label>Season Poster URL</label>
+                                        <input type="url" placeholder="Season poster URL" class="season-poster">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Number of Episodes</label>
+                                        <input type="number" min="1" class="episode-count" onchange="generateEpisodeFields(this)">
+                                    </div>
+                                </div>
+                                <div class="episodes-container"></div>
+                                <button class="btn btn-danger btn-small" onclick="removeSeason(this)">Remove Season</button>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-small" onclick="addSeason()">+ Add Season</button>
                     </div>
-                    <div id="season-container"></div>
                 </div>
 
                 <button class="btn btn-primary" onclick="addManualContent()">Add Content</button>
@@ -719,19 +760,23 @@
 
         // Global data storage
         let currentData = {
-            api_info: {
-                version: "2.0",
-                description: "Enhanced CineMax API with TMDB Integration",
-                last_updated: new Date().toISOString().split('T')[0],
-                total_movies: 0,
-                total_series: 0,
-                total_channels: 0
-            },
-            home: {
-                slides: [],
-                featuredMovies: [],
-                channels: []
-            }
+            Categories: [
+                {
+                    MainCategory: "Live TV",
+                    SubCategories: [""],
+                    Entries: []
+                },
+                {
+                    MainCategory: "Movies", 
+                    SubCategories: ["Action", "Comedy", "Drama", "Horror", "Romance", "Sci-Fi", "Thriller"],
+                    Entries: []
+                },
+                {
+                    MainCategory: "TV Series",
+                    SubCategories: ["Action", "Comedy", "Drama", "Horror", "Romance", "Sci-Fi", "Thriller", "Anime"],
+                    Entries: []
+                }
+            ]
         };
 
         let nextId = 1;
@@ -1147,22 +1192,35 @@
 
              console.log('Generated movie with sources:', movie.sources);
 
-            // Add to slides and featured movies
-            currentData.home.slides.push({
-                id: movie.id,
-                title: movie.title,
-                type: "movie",
-                image: movie.cover || movie.image,
-                url: `movies/${movie.id}`,
-                poster: movie
-            });
+            // Add movie to Categories structure
+            const moviesCategory = currentData.Categories.find(cat => cat.MainCategory === "Movies");
+            if (moviesCategory) {
+                // Create entry in JSON format
+                const entry = {
+                    Title: movie.title,
+                    SubCategory: movie.genres && movie.genres.length > 0 ? movie.genres[0].title : "Action",
+                    Country: "",
+                    Description: movie.description,
+                    Poster: movie.cover || movie.image,
+                    Thumbnail: movie.cover || movie.image,
+                    Rating: movie.rating || movie.imdb || 0,
+                    Duration: movie.duration || "",
+                    Year: movie.year || new Date().getFullYear(),
+                    Servers: []
+                };
 
-            currentData.home.featuredMovies.push(movie);
+                // Convert sources to servers format (name, url)
+                if (movie.sources) {
+                    entry.Servers = movie.sources.map(source => ({
+                        name: source.quality || source.title || "Unknown",
+                        url: source.url
+                    }));
+                }
+
+                moviesCategory.Entries.push(entry);
+            }
             
-            // Ensure movie has actors and genres arrays (even if empty)
-            if (!movie.actors) movie.actors = [];
-            if (!movie.genres) movie.genres = [];
-            currentData.api_info.total_movies++;
+            // Movie added to Categories structure
             
             saveData();
         }
@@ -1340,22 +1398,40 @@
                 created_at: new Date().toISOString().split('T')[0]
             };
 
-            // Add to slides and featured movies
-            currentData.home.slides.push({
-                id: series.id,
-                title: series.title,
-                type: "series",
-                image: series.cover || series.image,
-                url: `series/${series.id}`,
-                poster: series
-            });
+            // Add series to Categories structure
+            const seriesCategory = currentData.Categories.find(cat => cat.MainCategory === "TV Series");
+            if (seriesCategory) {
+                // Create entry in JSON format
+                const entry = {
+                    Title: series.title,
+                    SubCategory: series.genres && series.genres.length > 0 ? series.genres[0].title : "Action",
+                    Country: "",
+                    Description: series.description,
+                    Poster: series.cover || series.image,
+                    Thumbnail: series.cover || series.image,
+                    Rating: series.rating || series.imdb || 0,
+                    Year: series.year || new Date().getFullYear(),
+                    Seasons: series.seasons.map(season => ({
+                        Season: season.season_number,
+                        SeasonPoster: season.poster_path ? `${TMDB_IMAGE_BASE}${season.poster_path}` : "",
+                        Episodes: season.episodes.map(episode => ({
+                            Episode: episode.episode_number,
+                            Title: episode.name || `Episode ${episode.episode_number}`,
+                            Duration: formatDuration(episode.runtime),
+                            Description: episode.overview || "",
+                            Thumbnail: episode.still_path ? `${TMDB_IMAGE_BASE}${episode.still_path}` : "",
+                            Servers: episode.sources.map(source => ({
+                                name: source.quality || source.title || "Unknown",
+                                url: source.url
+                            }))
+                        }))
+                    }))
+                };
 
-            currentData.home.featuredMovies.push(series);
+                seriesCategory.Entries.push(entry);
+            }
             
-            // Ensure series has actors and genres arrays (even if empty)
-            if (!series.actors) series.actors = [];
-            if (!series.genres) series.genres = [];
-            currentData.api_info.total_series++;
+            // Series added to Categories structure
             
             saveData();
         }
@@ -1427,123 +1503,9 @@
              return [];
          }
 
-         // Helper functions for generating root-level arrays
-         function generateActorsFromContent() {
-             const actorMap = new Map();
-             
-             // Process both slides and featuredMovies to ensure all actors are captured
-             const allContent = [
-                 ...(currentData.home.slides || []).map(slide => slide.poster || slide),
-                 ...(currentData.home.featuredMovies || [])
-             ];
-             
-             allContent.forEach(content => {
-                 if (content && content.actors && Array.isArray(content.actors)) {
-                     content.actors.forEach(actor => {
-                         if (actor.name && !actorMap.has(actor.name)) {
-                             actorMap.set(actor.name, {
-                                 id: actor.id || nextId++,
-                                 name: actor.name,
-                                 type: actor.type || 'actor',
-                                 role: actor.role || 'Actor',
-                                 image: actor.image || '',
-                                 born: actor.born || '',
-                                 height: actor.height || '',
-                                 bio: actor.bio || 'Actor information from TMDB',
-                                 movies: []
-                             });
-                         }
-                         
-                         // Add movie to actor's filmography
-                         if (actorMap.has(actor.name)) {
-                             const actorData = actorMap.get(actor.name);
-                             if (!actorData.movies.some(m => m.id === content.id)) {
-                                 actorData.movies.push({
-                                     id: content.id,
-                                     title: content.title,
-                                     image: content.image,
-                                     year: content.year
-                                 });
-                             }
-                         }
-                     });
-                 }
-             });
-             
-             return Array.from(actorMap.values());
-         }
+         
 
-         function generateGenresFromContent() {
-             const genreMap = new Map();
-             
-             // Process both slides and featuredMovies to ensure all genres are captured
-             const allContent = [
-                 ...(currentData.home.slides || []).map(slide => slide.poster || slide),
-                 ...(currentData.home.featuredMovies || [])
-             ];
-             
-             allContent.forEach(content => {
-                 if (content && content.genres && Array.isArray(content.genres)) {
-                     content.genres.forEach(genre => {
-                         const genreTitle = genre.title || genre.name;
-                         if (genreTitle && !genreMap.has(genreTitle)) {
-                             genreMap.set(genreTitle, {
-                                 id: genre.id || nextId++,
-                                 title: genreTitle,
-                                 posters: []
-                             });
-                         }
-                         
-                         // Add content to genre's posters
-                         if (genreMap.has(genreTitle)) {
-                             const genreData = genreMap.get(genreTitle);
-                             if (!genreData.posters.some(p => p.id === content.id)) {
-                                 genreData.posters.push({
-                                     id: content.id,
-                                     title: content.title,
-                                     type: content.type,
-                                     label: content.label,
-                                     sublabel: content.sublabel,
-                                     imdb: content.imdb,
-                                     downloadas: content.downloadas,
-                                     comment: content.comment,
-                                     playas: content.playas,
-                                     description: content.description,
-                                     classification: content.classification,
-                                     year: content.year,
-                                     duration: content.duration,
-                                     rating: content.rating,
-                                     image: content.image,
-                                     cover: content.cover,
-                                     genres: content.genres,
-                                     actors: content.actors,
-                                     views: content.views,
-                                     created_at: content.created_at,
-                                     sources: content.sources,
-                                     trailer: content.trailer,
-                                     subtitles: content.subtitles,
-                                     ...(content.type === 'series' && { seasons: content.seasons })
-                                 });
-                             }
-                         }
-                     });
-                 }
-             });
-             
-             return Array.from(genreMap.values());
-         }
-
-        // Manual input functions
-        function toggleManualFields() {
-            const type = document.getElementById('manual-type').value;
-            const seriesFields = document.getElementById('series-fields');
-            
-            if (type === 'series') {
-                seriesFields.style.display = 'block';
-            } else {
-                seriesFields.style.display = 'none';
-            }
-        }
+        // Manual input functions (handled by updateSubCategories now)
 
         function addServer(containerId) {
             const container = document.getElementById(containerId);
@@ -1586,156 +1548,258 @@
         }
 
         function addManualContent() {
-            const type = document.getElementById('manual-type').value;
+            const category = document.getElementById('manual-category').value;
+            const subCategory = document.getElementById('manual-subcategory').value;
             const title = document.getElementById('manual-title').value.trim();
+            const country = document.getElementById('manual-country').value.trim();
             
             if (!title) {
                 showStatus('warning', 'Please enter a title');
                 return;
             }
 
-            // Get sources
-            const sourceInputs = document.querySelectorAll('#manual-sources .server-item');
-            const sources = [];
+            // Get servers
+            const serverInputs = document.querySelectorAll('#manual-servers .server-item');
+            const servers = [];
             
-            sourceInputs.forEach(item => {
-                const name = item.querySelector('.source-name').value.trim();
-                const url = item.querySelector('.source-url').value.trim();
-                const sourceType = item.querySelector('.source-type').value;
-                const quality = item.querySelector('.source-quality').value;
+            serverInputs.forEach(item => {
+                const name = item.querySelector('.server-name').value.trim();
+                const url = item.querySelector('.server-url').value.trim();
                 
                 if (name && url) {
-                    sources.push({
-                        id: nextId++,
-                        type: sourceType,
-                        title: `${name} ${quality}`,
-                        quality: quality,
-                        size: sourceType === 'live' ? 'Live' : 'Unknown',
-                        kind: getSourceKind(url),
-                        premium: "false",
-                        external: false,
-                        url: url
+                    // Auto-detect VidSrc and VidJoy URLs
+                    let finalUrl = url;
+                    if (name.toLowerCase().includes('vidsrc') && !url.startsWith('http')) {
+                        // If name contains vidsrc and url is just TMDB ID
+                        if (category === 'Movies') {
+                            finalUrl = `${VIDSRC_BASE}/movie/${url}`;
+                        } else if (category === 'TV Series') {
+                            finalUrl = `${VIDSRC_BASE}/tv/${url}/1/1`; // Default to season 1 episode 1
+                        }
+                    } else if (name.toLowerCase().includes('vidjoy') && !url.startsWith('http')) {
+                        // If name contains vidjoy and url is just TMDB ID
+                        if (category === 'Movies') {
+                            finalUrl = `${VIDJOY_BASE}/movie/${url}`;
+                        } else if (category === 'TV Series') {
+                            finalUrl = `${VIDJOY_BASE}/tv/${url}/1/1`; // Default to season 1 episode 1
+                        }
+                    }
+                    
+                    servers.push({
+                        name: name,
+                        url: finalUrl
                     });
                 }
             });
 
-            if (sources.length === 0) {
-                showStatus('warning', 'Please add at least one video source');
+            if (servers.length === 0) {
+                showStatus('warning', 'Please add at least one server');
                 return;
             }
 
-            const content = {
-                id: nextId++,
-                title: title,
-                type: type,
-                label: type === 'live' ? 'Live TV' : (type === 'series' ? 'Series' : 'Movie'),
-                sublabel: document.getElementById('manual-year').value || 'Unknown Year',
-                imdb: document.getElementById('manual-rating').value || "0",
-                downloadas: title.toLowerCase().replace(/\s+/g, '-'),
-                comment: true,
-                playas: type === 'live' ? 'live' : 'video',
-                description: document.getElementById('manual-description').value || 'No description available',
-                classification: 'PG-13',
-                year: document.getElementById('manual-year').value || 'Unknown',
-                duration: type === 'live' ? 'Live' : 'Unknown',
-                rating: parseFloat(document.getElementById('manual-rating').value) || 0,
-                image: document.getElementById('manual-image').value || null,
-                cover: document.getElementById('manual-image').value || null,
-                genres: [],
-                sources: sources,
-                trailer: null,
-                actors: [],
-                subtitles: [],
-                views: Math.floor(Math.random() * 1000) + 100,
-                created_at: new Date().toISOString().split('T')[0]
-            };
-
-            if (type === 'series') {
-                content.seasons = []; // Would need to implement season/episode creation
+            // Find the appropriate category
+            const targetCategory = currentData.Categories.find(cat => cat.MainCategory === category);
+            if (!targetCategory) {
+                showStatus('error', 'Invalid category selected');
+                return;
             }
 
-            // Add to appropriate collection
-            if (type === 'live') {
-                if (!currentData.home.channels) currentData.home.channels = [];
+            // Create entry based on category type
+            if (category === 'TV Series') {
+                // Handle TV Series with Seasons
+                const seasonsContainer = document.getElementById('seasons-container');
+                const seasonItems = seasonsContainer.querySelectorAll('.season-item');
                 
-                const channel = {
-                    id: content.id,
-                    title: content.title,
-                    label: content.label,
-                    sublabel: content.sublabel,
-                    description: content.description,
-                    website: "",
-                    classification: content.classification,
-                    views: content.views,
-                    shares: Math.floor(content.views * 0.1),
-                    rating: content.rating,
-                    comment: content.comment,
-                    image: content.image,
-                    playas: "live",
-                    sources: content.sources,
-                    categories: [],
-                    countries: []
-                };
-                
-                currentData.home.channels.push(channel);
-                currentData.api_info.total_channels++;
-                
-                // Ensure channel has actors and genres arrays (even if empty)
-                if (!channel.actors) channel.actors = [];
-                if (!channel.genres) channel.genres = [];
-            } else {
-                currentData.home.slides.push({
-                    id: content.id,
-                    title: content.title,
-                    type: content.type,
-                    image: content.image,
-                    url: `${content.type}s/${content.id}`,
-                    poster: content
+                const seasons = [];
+                seasonItems.forEach((seasonItem, index) => {
+                    const seasonPoster = seasonItem.querySelector('.season-poster').value.trim();
+                    const episodeCount = parseInt(seasonItem.querySelector('.episode-count').value) || 1;
+                    
+                    const episodes = [];
+                    for (let i = 1; i <= episodeCount; i++) {
+                        episodes.push({
+                            Episode: i,
+                            Title: `Episode ${i}`,
+                            Duration: document.getElementById('manual-duration').value || "",
+                            Description: "",
+                            Thumbnail: document.getElementById('manual-thumbnail').value || "",
+                            Servers: servers.map(server => ({
+                                name: server.name,
+                                url: server.url.replace('/1/1', `/${index + 1}/${i}`) // Update season/episode in URL for vidsrc/vidjoy
+                            }))
+                        });
+                    }
+                    
+                    seasons.push({
+                        Season: index + 1,
+                        SeasonPoster: seasonPoster,
+                        Episodes: episodes
+                    });
                 });
-                
-                currentData.home.featuredMovies.push(content);
-                
-                // Ensure content has actors and genres arrays (even if empty)
-                if (!content.actors) content.actors = [];
-                if (!content.genres) content.genres = [];
-                
-                if (type === 'movie') {
-                    currentData.api_info.total_movies++;
-                } else {
-                    currentData.api_info.total_series++;
+
+                const entry = {
+                    Title: title,
+                    SubCategory: subCategory,
+                    Country: country,
+                    Description: document.getElementById('manual-description').value || '',
+                    Poster: document.getElementById('manual-poster').value || '',
+                    Thumbnail: document.getElementById('manual-thumbnail').value || '',
+                    Rating: parseFloat(document.getElementById('manual-rating').value) || 0,
+                    Year: parseInt(document.getElementById('manual-year').value) || new Date().getFullYear(),
+                    Seasons: seasons
+                };
+
+                targetCategory.Entries.push(entry);
+            } else {
+                // Handle Movies and Live TV
+                const entry = {
+                    Title: title,
+                    SubCategory: subCategory,
+                    Country: country,
+                    Description: document.getElementById('manual-description').value || '',
+                    Poster: document.getElementById('manual-poster').value || '',
+                    Thumbnail: document.getElementById('manual-thumbnail').value || '',
+                    Rating: parseFloat(document.getElementById('manual-rating').value) || 0,
+                    Servers: servers
+                };
+
+                if (category === 'Movies') {
+                    entry.Duration = document.getElementById('manual-duration').value || '';
+                    entry.Year = parseInt(document.getElementById('manual-year').value) || new Date().getFullYear();
                 }
+
+                targetCategory.Entries.push(entry);
+            }
+
+            // Update subcategories if new one was added
+            if (!targetCategory.SubCategories.includes(subCategory)) {
+                targetCategory.SubCategories.push(subCategory);
             }
 
             saveData();
             updateDataStats();
             updatePreview();
-            showStatus('success', `${type} added successfully!`);
+            showStatus('success', `${category.slice(0, -1)} added successfully!`);
             
             // Clear form
+            clearManualForm();
+        }
+
+        // Helper functions for manual form
+        function updateSubCategories() {
+            const category = document.getElementById('manual-category').value;
+            const subCategorySelect = document.getElementById('manual-subcategory');
+            const seriesFields = document.getElementById('series-fields');
+            
+            // Clear existing options
+            subCategorySelect.innerHTML = '';
+            
+            // Find category and populate subcategories
+            const targetCategory = currentData.Categories.find(cat => cat.MainCategory === category);
+            if (targetCategory) {
+                targetCategory.SubCategories.forEach(subCat => {
+                    if (subCat) { // Skip empty strings
+                        const option = document.createElement('option');
+                        option.value = subCat;
+                        option.textContent = subCat;
+                        subCategorySelect.appendChild(option);
+                    }
+                });
+            }
+            
+            // Show/hide series fields
+            if (category === 'TV Series') {
+                seriesFields.style.display = 'block';
+            } else {
+                seriesFields.style.display = 'none';
+            }
+        }
+
+        function addManualServer() {
+            const serversList = document.getElementById('manual-servers');
+            const newServer = document.createElement('div');
+            newServer.className = 'server-item';
+            newServer.innerHTML = `
+                <input type="text" placeholder="Server Name (e.g., 1080p, 720p, vidsrc, vidjoy.pro/embed)" class="server-name">
+                <input type="text" placeholder="URL or TMDB ID (for vidsrc/vidjoy)" class="server-url">
+                <button class="btn btn-danger btn-small" onclick="removeServer(this)">Remove</button>
+            `;
+            serversList.appendChild(newServer);
+        }
+
+        function addSeason() {
+            const seasonsContainer = document.getElementById('seasons-container');
+            const seasonCount = seasonsContainer.querySelectorAll('.season-item').length + 1;
+            
+            const newSeason = document.createElement('div');
+            newSeason.className = 'season-item';
+            newSeason.innerHTML = `
+                <h4>Season ${seasonCount}</h4>
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Season Poster URL</label>
+                        <input type="url" placeholder="Season poster URL" class="season-poster">
+                    </div>
+                    <div class="form-group">
+                        <label>Number of Episodes</label>
+                        <input type="number" min="1" class="episode-count" onchange="generateEpisodeFields(this)">
+                    </div>
+                </div>
+                <div class="episodes-container"></div>
+                <button class="btn btn-danger btn-small" onclick="removeSeason(this)">Remove Season</button>
+            `;
+            seasonsContainer.appendChild(newSeason);
+        }
+
+        function removeSeason(button) {
+            button.parentElement.remove();
+            // Update season numbers
+            const seasonItems = document.querySelectorAll('#seasons-container .season-item');
+            seasonItems.forEach((item, index) => {
+                item.querySelector('h4').textContent = `Season ${index + 1}`;
+            });
+        }
+
+        function generateEpisodeFields(input) {
+            // This is a placeholder - episodes are generated automatically
+            // based on the episode count when adding content
+        }
+
+        function clearManualForm() {
             document.getElementById('manual-title').value = '';
+            document.getElementById('manual-country').value = '';
             document.getElementById('manual-description').value = '';
-            document.getElementById('manual-image').value = '';
+            document.getElementById('manual-poster').value = '';
+            document.getElementById('manual-thumbnail').value = '';
+            document.getElementById('manual-duration').value = '';
             document.getElementById('manual-year').value = '';
             document.getElementById('manual-rating').value = '';
             
-            // Reset sources to one empty item
-            document.getElementById('manual-sources').innerHTML = `
+            // Reset servers to one empty item
+            document.getElementById('manual-servers').innerHTML = `
                 <div class="server-item">
-                    <input type="text" placeholder="Source Name" class="source-name">
-                    <input type="url" placeholder="Video URL" class="source-url">
-                    <select class="source-type">
-                        <option value="video">Direct Video</option>
-                        <option value="embed">Embedded</option>
-                        <option value="youtube">YouTube</option>
-                        <option value="live">Live Stream</option>
-                    </select>
-                    <select class="source-quality">
-                        <option value="1080p">1080p</option>
-                        <option value="720p">720p</option>
-                        <option value="480p">480p</option>
-                        <option value="Auto">Auto</option>
-                    </select>
+                    <input type="text" placeholder="Server Name (e.g., 1080p, 720p, vidsrc, vidjoy.pro/embed)" class="server-name">
+                    <input type="text" placeholder="URL or TMDB ID (for vidsrc/vidjoy)" class="server-url">
                     <button class="btn btn-danger btn-small" onclick="removeServer(this)">Remove</button>
+                </div>
+            `;
+            
+            // Reset seasons to one empty season
+            document.getElementById('seasons-container').innerHTML = `
+                <div class="season-item">
+                    <h4>Season 1</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Season Poster URL</label>
+                            <input type="url" placeholder="Season poster URL" class="season-poster">
+                        </div>
+                        <div class="form-group">
+                            <label>Number of Episodes</label>
+                            <input type="number" min="1" class="episode-count" onchange="generateEpisodeFields(this)">
+                        </div>
+                    </div>
+                    <div class="episodes-container"></div>
+                    <button class="btn btn-danger btn-small" onclick="removeSeason(this)">Remove Season</button>
                 </div>
             `;
         }
@@ -1854,31 +1918,22 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
                     
-                    // Validate data structure
-                    if (!importedData.home || !importedData.api_info) {
-                        throw new Error('Invalid data format');
+                    // Validate data structure for Categories format
+                    if (!importedData.Categories || !Array.isArray(importedData.Categories)) {
+                        throw new Error('Invalid data format - expected Categories array');
+                    }
+                    
+                    // Validate each category has required structure
+                    const requiredCategories = ['Live TV', 'Movies', 'TV Series'];
+                    const hasAllCategories = requiredCategories.every(reqCat => 
+                        importedData.Categories.some(cat => cat.MainCategory === reqCat)
+                    );
+                    
+                    if (!hasAllCategories) {
+                        throw new Error('Missing required categories (Live TV, Movies, TV Series)');
                     }
                     
                     currentData = importedData;
-                    
-                    // Update next ID to prevent conflicts
-                    let maxId = 0;
-                    const allItems = [
-                        ...(currentData.home.slides || []),
-                        ...(currentData.home.featuredMovies || []),
-                        ...(currentData.home.channels || [])
-                    ];
-                    
-                    allItems.forEach(item => {
-                        if (item.id > maxId) maxId = item.id;
-                        if (item.sources) {
-                            item.sources.forEach(source => {
-                                if (source.id > maxId) maxId = source.id;
-                            });
-                        }
-                    });
-                    
-                    nextId = maxId + 1;
                     
                     saveData();
                     updateDataStats();
@@ -1892,199 +1947,186 @@
             reader.readAsText(file);
         }
 
-                 function exportData() {
-             // Create the complete CineMax API structure with root-level movies array
-             // Limit slides to top-rated content (highest rating first)
-             const limitedSlides = (currentData.home.slides || [])
-                 .sort((a, b) => {
-                     const ratingA = a.poster?.rating || a.rating || 0;
-                     const ratingB = b.poster?.rating || b.rating || 0;
-                     return ratingB - ratingA; // Sort by highest rating first
-                 })
-                 .slice(0, 10); // Limit to top 10 highest rated items
-             
-             const exportData = {
-                 ...currentData,
-                 home: {
-                     ...currentData.home,
-                     slides: limitedSlides, // Use limited slides instead of all slides
-                     // Add featuredMovies INSIDE home object for LoadActivity compatibility
-                     featuredMovies: currentData.home.featuredMovies || [],
-                     // Add actors and genres INSIDE home object for HomeFragment compatibility
-                     actors: generateActorsFromContent() || [],
-                     genres: generateGenresFromContent() || []
-                 },
-                 // Add root-level movies array that includes both movies and series
-                 movies: currentData.home.featuredMovies || [],
-                 // Keep root-level arrays for other fragments compatibility
-                 actors: generateActorsFromContent() || [],
-                 genres: generateGenresFromContent() || [],
-                 // Ensure channels array is present
-                 channels: currentData.channels || []
-             };
-             
-             const dataStr = JSON.stringify(exportData, null, 2);
-             const dataBlob = new Blob([dataStr], { type: 'application/json' });
-             
-             const link = document.createElement('a');
-             link.href = URL.createObjectURL(dataBlob);
-             link.download = `cinemax-data-${new Date().toISOString().split('T')[0]}.json`;
-             link.click();
-             
-             showStatus('success', 'Data exported successfully with root-level movies array!');
-         }
-
-                 function exportSample() {
-             const sampleMovie = {
-                 id: 1,
-                 title: "Sample Movie",
-                 type: "movie",
-                 label: "Action",
-                 sublabel: "Released 2023",
-                 imdb: "8.5",
-                 downloadas: "sample-movie.mp4",
-                 comment: true,
-                 playas: "video",
-                 description: "This is a sample movie entry showing the correct CineMax structure",
-                 classification: "PG-13",
-                 year: "2023",
-                 duration: "2:30",
-                 rating: 8.5,
-                 image: "https://example.com/poster.jpg",
-                 cover: "https://example.com/cover.jpg",
-                 genres: [
-                     {
-                         id: 28,
-                         title: "Action"
-                     }
-                 ],
-                 sources: [
-                     {
-                         id: 1,
-                         type: "embed",
-                         title: "VidSrc Server 1080p",
-                         quality: "1080p",
-                         size: "Auto",
-                         kind: "play",
-                         premium: "false",
-                         external: false,
-                         url: "https://vidsrc.net/embed/movie/123"
-                     },
-                     {
-                         id: 2,
-                         type: "embed",
-                         title: "VidJoy Server 1080p",
-                         quality: "1080p", 
-                         size: "Auto",
-                         kind: "play",
-                         premium: "false",
-                         external: false,
-                         url: "https://vidjoy.pro/embed/movie/123"
-                     }
-                 ],
-                 trailer: {
-                     id: 3,
-                     type: "youtube",
-                     title: "Sample Movie Trailer",
-                     url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                 },
-                 actors: [
-                     {
-                         id: 1,
-                         name: "John Doe",
-                         type: "actor",
-                         role: "Lead Actor",
-                         image: "https://example.com/actor.jpg",
-                         bio: "Sample actor"
-                     }
-                 ],
-                 subtitles: [],
-                 views: 5000,
-                 created_at: new Date().toISOString().split('T')[0]
-             };
-
-             const sampleData = {
-                 api_info: {
-                     version: "2.0",
-                     description: "Sample CineMax API Format with Complete Structure",
-                     last_updated: new Date().toISOString().split('T')[0],
-                     total_movies: 1,
-                     total_series: 0,
-                     total_channels: 0
-                 },
-                 home: {
-                     slides: [
-                         {
-                             id: 1,
-                             title: "Sample Movie",
-                             type: "movie",
-                             image: "https://example.com/poster.jpg",
-                             url: "movies/1",
-                             poster: sampleMovie
-                         }
-                     ],
-                     featuredMovies: [sampleMovie],
-                     channels: []
-                 },
-                 // Root-level movies array for GenreActivity and other fragments
-                 movies: [sampleMovie],
-                 actors: [
-                     {
-                         id: 1,
-                         name: "John Doe",
-                         type: "actor",
-                         role: "Lead Actor",
-                         image: "https://example.com/actor.jpg",
-                         born: "1980-01-01",
-                         height: "6'0\"",
-                         bio: "Sample actor biography",
-                         movies: [
-                             {
-                                 id: 1,
-                                 title: "Sample Movie",
-                                 image: "https://example.com/poster.jpg",
-                                 year: "2023"
-                             }
-                         ]
-                     }
-                 ],
-                 genres: [
-                     {
-                         id: 28,
-                         title: "Action",
-                         posters: [sampleMovie]
-                     }
-                 ],
-                 channels: []
-             };
-            
-            const dataStr = JSON.stringify(sampleData, null, 2);
+                                 function exportData() {
+            // Export data in the new Categories structure
+            const dataStr = JSON.stringify(currentData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
             
             const link = document.createElement('a');
             link.href = URL.createObjectURL(dataBlob);
-            link.download = 'cinemax-sample-format.json';
+            link.download = `playlist-${new Date().toISOString().split('T')[0]}.json`;
             link.click();
             
-            showStatus('success', 'Sample format exported!');
+            showStatus('success', 'Data exported successfully in Categories format!');
+        }
+
+                                 function exportSample() {
+            const sampleData = {
+                Categories: [
+                    {
+                        MainCategory: "Live TV",
+                        SubCategories: [""],
+                        Entries: [
+                            {
+                                Title: "Sample Live Channel",
+                                SubCategory: "",
+                                Country: "US",
+                                Description: "A sample live TV channel",
+                                Poster: "https://example.com/channel-poster.jpg",
+                                Thumbnail: "https://example.com/channel-thumb.jpg",
+                                Rating: 8,
+                                Servers: [
+                                    {
+                                        name: "1080p",
+                                        url: "https://example.com/live-stream.m3u8"
+                                    },
+                                    {
+                                        name: "720p",
+                                        url: "https://example.com/live-stream-720.m3u8"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        MainCategory: "Movies",
+                        SubCategories: ["Action", "Comedy", "Drama"],
+                        Entries: [
+                            {
+                                Title: "Sample Movie",
+                                SubCategory: "Action",
+                                Country: "US",
+                                Description: "A sample action movie demonstrating the Categories structure",
+                                Poster: "https://example.com/poster.jpg",
+                                Thumbnail: "https://example.com/thumbnail.jpg",
+                                Rating: 8.5,
+                                Duration: "2:30:00",
+                                Year: 2023,
+                                Servers: [
+                                    {
+                                        name: "4k",
+                                        url: "https://example.com/movie-4k.mp4"
+                                    },
+                                    {
+                                        name: "1080p",
+                                        url: "https://example.com/movie-1080p.mp4"
+                                    },
+                                    {
+                                        name: "720p",
+                                        url: "https://example.com/movie-720p.mp4"
+                                    },
+                                    {
+                                        name: "vidsrc",
+                                        url: "https://vidsrc.net/embed/movie/123456"
+                                    },
+                                    {
+                                        name: "vidjoy.pro/embed",
+                                        url: "https://vidjoy.pro/embed/movie/123456"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        MainCategory: "TV Series",
+                        SubCategories: ["Action", "Comedy", "Drama", "Anime"],
+                        Entries: [
+                            {
+                                Title: "Sample TV Series",
+                                SubCategory: "Action",
+                                Country: "US",
+                                Description: "A sample TV series demonstrating the Categories structure with seasons and episodes",
+                                Poster: "https://example.com/series-poster.jpg",
+                                Thumbnail: "https://example.com/series-thumb.jpg",
+                                Rating: 9.2,
+                                Year: 2023,
+                                Seasons: [
+                                    {
+                                        Season: 1,
+                                        SeasonPoster: "https://example.com/season1-poster.jpg",
+                                        Episodes: [
+                                            {
+                                                Episode: 1,
+                                                Title: "Pilot Episode",
+                                                Duration: "00:45:00",
+                                                Description: "The first episode of the series",
+                                                Thumbnail: "https://example.com/episode1-thumb.jpg",
+                                                Servers: [
+                                                    {
+                                                        name: "1080p",
+                                                        url: "https://example.com/s1e1-1080p.mp4"
+                                                    },
+                                                    {
+                                                        name: "720p",
+                                                        url: "https://example.com/s1e1-720p.mp4"
+                                                    },
+                                                    {
+                                                        name: "vidsrc",
+                                                        url: "https://vidsrc.net/embed/tv/123456/1/1"
+                                                    },
+                                                    {
+                                                        name: "vidjoy.pro/embed",
+                                                        url: "https://vidjoy.pro/embed/tv/123456/1/1"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                Episode: 2,
+                                                Title: "Second Episode",
+                                                Duration: "00:43:00",
+                                                Description: "The second episode",
+                                                Thumbnail: "https://example.com/episode2-thumb.jpg",
+                                                Servers: [
+                                                    {
+                                                        name: "1080p",
+                                                        url: "https://example.com/s1e2-1080p.mp4"
+                                                    },
+                                                    {
+                                                        name: "vidsrc",
+                                                        url: "https://vidsrc.net/embed/tv/123456/1/2"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            };
+           
+           const dataStr = JSON.stringify(sampleData, null, 2);
+           const dataBlob = new Blob([dataStr], { type: 'application/json' });
+           
+           const link = document.createElement('a');
+           link.href = URL.createObjectURL(dataBlob);
+           link.download = 'playlist-sample-format.json';
+           link.click();
+           
+           showStatus('success', 'Sample Categories format exported!');
         }
 
         function clearAllData() {
             if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
                 currentData = {
-                    api_info: {
-                        version: "2.0",
-                        description: "Enhanced CineMax API with TMDB Integration",
-                        last_updated: new Date().toISOString().split('T')[0],
-                        total_movies: 0,
-                        total_series: 0,
-                        total_channels: 0
-                    },
-                    home: {
-                        slides: [],
-                        featuredMovies: [],
-                        channels: []
-                    }
+                    Categories: [
+                        {
+                            MainCategory: "Live TV",
+                            SubCategories: [""],
+                            Entries: []
+                        },
+                        {
+                            MainCategory: "Movies", 
+                            SubCategories: ["Action", "Comedy", "Drama", "Horror", "Romance", "Sci-Fi", "Thriller"],
+                            Entries: []
+                        },
+                        {
+                            MainCategory: "TV Series",
+                            SubCategories: ["Action", "Comedy", "Drama", "Horror", "Romance", "Sci-Fi", "Thriller", "Anime"],
+                            Entries: []
+                        }
+                    ]
                 };
                 
                 nextId = 1;
@@ -2096,30 +2138,29 @@
         }
 
         function removeDuplicates() {
-            const originalCount = currentData.home.featuredMovies.length;
+            let totalRemoved = 0;
             
-            // Remove duplicates based on title and year
-            const seen = new Set();
-            currentData.home.featuredMovies = currentData.home.featuredMovies.filter(item => {
-                const key = `${item.title}-${item.year}-${item.type}`;
-                if (seen.has(key)) {
-                    return false;
-                }
-                seen.add(key);
-                return true;
+            // Remove duplicates from each category
+            currentData.Categories.forEach(category => {
+                const originalCount = category.Entries.length;
+                const seen = new Set();
+                
+                category.Entries = category.Entries.filter(entry => {
+                    const key = `${entry.Title}-${entry.Year}-${category.MainCategory}`;
+                    if (seen.has(key)) {
+                        return false;
+                    }
+                    seen.add(key);
+                    return true;
+                });
+                
+                totalRemoved += originalCount - category.Entries.length;
             });
-            
-            // Update slides to match
-            currentData.home.slides = currentData.home.slides.filter(slide => 
-                currentData.home.featuredMovies.some(movie => movie.id === slide.id)
-            );
-            
-            const removed = originalCount - currentData.home.featuredMovies.length;
             
             saveData();
             updateDataStats();
             updatePreview();
-            showStatus('success', `Removed ${removed} duplicate items!`);
+            showStatus('success', `Removed ${totalRemoved} duplicate items!`);
         }
 
         // Preview and management functions
@@ -2131,156 +2172,85 @@
             
             container.innerHTML = '';
             
-            let items = [];
+            let allEntries = [];
             
-            if (filter === 'all' || filter === 'movie' || filter === 'series') {
-                items = items.concat(currentData.home.featuredMovies.filter(item => 
-                    filter === 'all' || item.type === filter
-                ));
-            }
+            // Collect entries from all categories
+            currentData.Categories.forEach(category => {
+                if (filter === 'all' || 
+                    (filter === 'movie' && category.MainCategory === 'Movies') ||
+                    (filter === 'series' && category.MainCategory === 'TV Series') ||
+                    (filter === 'live' && category.MainCategory === 'Live TV')) {
+                    
+                    category.Entries.forEach((entry, index) => {
+                        allEntries.push({
+                            ...entry,
+                            categoryIndex: currentData.Categories.indexOf(category),
+                            entryIndex: index,
+                            mainCategory: category.MainCategory
+                        });
+                    });
+                }
+            });
             
-            if (filter === 'all' || filter === 'live') {
-                items = items.concat((currentData.home.channels || []).map(channel => ({
-                    ...channel,
-                    type: 'live'
-                })));
-            }
-            
-            items.forEach(item => {
+            allEntries.forEach(entry => {
                 const div = document.createElement('div');
                 div.className = 'preview-item';
                 
+                const serverCount = entry.Servers ? entry.Servers.length : 
+                                  (entry.Seasons ? entry.Seasons.reduce((total, season) => 
+                                      total + (season.Episodes ? season.Episodes.reduce((episodeTotal, episode) => 
+                                          episodeTotal + (episode.Servers ? episode.Servers.length : 0), 0) : 0), 0) : 0);
+                
                 div.innerHTML = `
-                    <img src="${item.image || 'https://via.placeholder.com/300x450?text=No+Image'}" 
-                         alt="${item.title}" loading="lazy">
+                    <img src="${entry.Poster || entry.Thumbnail || 'https://via.placeholder.com/300x450?text=No+Image'}" 
+                         alt="${entry.Title}" loading="lazy">
                     <div class="info">
-                        <div class="title">${item.title}</div>
-                        <div class="meta">${item.year || 'Unknown'} • ${item.type?.toUpperCase()} • Rating: ${item.rating || 'N/A'}</div>
-                        <div class="meta">Sources: ${item.sources?.length || 0}</div>
+                        <div class="title">${entry.Title}</div>
+                        <div class="meta">${entry.Year || 'Unknown'} • ${entry.mainCategory} • Rating: ${entry.Rating || 'N/A'}</div>
+                        <div class="meta">Category: ${entry.SubCategory} • Country: ${entry.Country || 'Unknown'}</div>
+                        <div class="meta">Servers: ${serverCount}</div>
                         <div style="margin-top: 10px;">
-                            <button class="btn btn-secondary btn-small" onclick="editContent(${item.id})">Edit</button>
-                            <button class="btn btn-danger btn-small" onclick="deleteContent(${item.id}, '${item.type}')">Delete</button>
+                            <button class="btn btn-danger btn-small" onclick="deleteEntry(${entry.categoryIndex}, ${entry.entryIndex})">Delete</button>
                         </div>
                     </div>
                 `;
                 
                 container.appendChild(div);
             });
-        }
-
-        function editContent(id) {
-            // Find the content
-            let content = currentData.home.featuredMovies.find(item => item.id === id);
-            if (!content) {
-                content = (currentData.home.channels || []).find(item => item.id === id);
-            }
             
-            if (!content) {
-                showStatus('error', 'Content not found');
-                return;
-            }
-            
-            // Show edit modal (simplified version)
-            const modal = document.getElementById('edit-modal');
-            const form = document.getElementById('edit-form');
-            
-            form.innerHTML = `
-                <div class="form-group">
-                    <label>Title</label>
-                    <input type="text" id="edit-title" value="${content.title}">
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="edit-description" rows="4">${content.description || ''}</textarea>
-                </div>
-                <div class="form-group">
-                    <label>Year</label>
-                    <input type="text" id="edit-year" value="${content.year || ''}">
-                </div>
-                <div class="form-group">
-                    <label>Rating</label>
-                    <input type="number" id="edit-rating" min="0" max="10" step="0.1" value="${content.rating || ''}">
-                </div>
-                <input type="hidden" id="edit-id" value="${id}">
-            `;
-            
-            modal.style.display = 'block';
-        }
-
-        function closeEditModal() {
-            document.getElementById('edit-modal').style.display = 'none';
-        }
-
-        function saveEdit() {
-            const id = parseInt(document.getElementById('edit-id').value);
-            const title = document.getElementById('edit-title').value;
-            const description = document.getElementById('edit-description').value;
-            const year = document.getElementById('edit-year').value;
-            const rating = parseFloat(document.getElementById('edit-rating').value);
-            
-            // Find and update content
-            let content = currentData.home.featuredMovies.find(item => item.id === id);
-            let isChannel = false;
-            
-            if (!content) {
-                content = (currentData.home.channels || []).find(item => item.id === id);
-                isChannel = true;
-            }
-            
-            if (content) {
-                content.title = title;
-                content.description = description;
-                content.year = year;
-                content.rating = rating;
-                
-                // Update corresponding slide
-                const slide = currentData.home.slides.find(s => s.id === id);
-                if (slide) {
-                    slide.title = title;
-                }
-                
-                saveData();
-                updatePreview();
-                closeEditModal();
-                showStatus('success', 'Content updated successfully!');
+            if (allEntries.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">No content found matching the selected filter.</p>';
             }
         }
 
-        function deleteContent(id, type) {
-            if (confirm('Are you sure you want to delete this content?')) {
-                // Remove from featuredMovies or channels
-                if (type === 'live') {
-                    currentData.home.channels = (currentData.home.channels || []).filter(item => item.id !== id);
-                    currentData.api_info.total_channels--;
-                } else {
-                    currentData.home.featuredMovies = currentData.home.featuredMovies.filter(item => item.id !== id);
-                    if (type === 'movie') {
-                        currentData.api_info.total_movies--;
-                    } else {
-                        currentData.api_info.total_series--;
-                    }
-                }
-                
-                // Remove from slides
-                currentData.home.slides = currentData.home.slides.filter(slide => slide.id !== id);
-                
+        function deleteEntry(categoryIndex, entryIndex) {
+            if (confirm('Are you sure you want to delete this entry?')) {
+                currentData.Categories[categoryIndex].Entries.splice(entryIndex, 1);
                 saveData();
                 updateDataStats();
                 updatePreview();
-                showStatus('success', 'Content deleted successfully!');
+                showStatus('success', 'Entry deleted successfully!');
             }
         }
 
+
+
         // Utility functions
         function updateDataStats() {
-            const movieCount = currentData.home.featuredMovies.filter(item => item.type === 'movie').length;
-            const seriesCount = currentData.home.featuredMovies.filter(item => item.type === 'series').length;
-            const channelCount = (currentData.home.channels || []).length;
+            let movieCount = 0;
+            let seriesCount = 0;
+            let channelCount = 0;
             
-            currentData.api_info.total_movies = movieCount;
-            currentData.api_info.total_series = seriesCount;
-            currentData.api_info.total_channels = channelCount;
-            currentData.api_info.last_updated = new Date().toISOString().split('T')[0];
+            // Count entries in each category
+            currentData.Categories.forEach(category => {
+                if (category.MainCategory === 'Movies') {
+                    movieCount = category.Entries.length;
+                } else if (category.MainCategory === 'TV Series') {
+                    seriesCount = category.Entries.length;
+                } else if (category.MainCategory === 'Live TV') {
+                    channelCount = category.Entries.length;
+                }
+            });
             
             // Update display
             if (document.getElementById('movie-count')) {
@@ -2322,70 +2292,32 @@
             }
         }
 
-                 function saveData() {
-             // Update root-level arrays for CineMax compatibility
-             const dataToSave = {
-                 ...currentData,
-                 movies: currentData.home.featuredMovies || [],
-                 actors: generateActorsFromContent(),
-                 genres: generateGenresFromContent()
-             };
-             
-             localStorage.setItem('cinemax-data', JSON.stringify(dataToSave));
-         }
+                                 function saveData() {
+            localStorage.setItem('playlist-data', JSON.stringify(currentData));
+        }
 
         function loadSavedData() {
-            const saved = localStorage.getItem('cinemax-data');
+            const saved = localStorage.getItem('playlist-data');
             if (saved) {
                 try {
-                    currentData = JSON.parse(saved);
-                    
-                    // Find the highest ID to continue from
-                    let maxId = 0;
-                    const allItems = [
-                        ...(currentData.home.slides || []),
-                        ...(currentData.home.featuredMovies || []),
-                        ...(currentData.home.channels || [])
-                    ];
-                    
-                    allItems.forEach(item => {
-                        if (item.id > maxId) maxId = item.id;
-                        if (item.sources) {
-                            item.sources.forEach(source => {
-                                if (source.id > maxId) maxId = source.id;
-                            });
-                        }
-                        if (item.seasons) {
-                            item.seasons.forEach(season => {
-                                if (season.id > maxId) maxId = season.id;
-                                if (season.episodes) {
-                                    season.episodes.forEach(episode => {
-                                        if (episode.id > maxId) maxId = episode.id;
-                                        if (episode.sources) {
-                                            episode.sources.forEach(source => {
-                                                if (source.id > maxId) maxId = source.id;
-                                            });
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    });
-                    
-                    nextId = maxId + 1;
+                    const parsedData = JSON.parse(saved);
+                    // Validate it has the Categories structure
+                    if (parsedData.Categories && Array.isArray(parsedData.Categories)) {
+                        currentData = parsedData;
+                    }
                 } catch (error) {
                     console.error('Error loading saved data:', error);
                 }
             }
         }
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('edit-modal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        }
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedData();
+            updateDataStats();
+            updatePreview();
+            updateSubCategories(); // Initialize subcategories
+        });
     </script>
 </body>
 </html>
