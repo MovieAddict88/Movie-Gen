@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineMax Enhanced API Manager</title>
+    <title>Playlist Manager - Auto VidSrc/VidJoy + Manual Sources</title>
     <style>
         :root {
             --primary: #e50914;
@@ -412,8 +412,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎬 CineMax Enhanced API Manager</h1>
-            <p class="subtitle">Complete TMDB Integration with Automatic Video Sources & Advanced Management</p>
+            <h1>🎬 Playlist Manager</h1>
+            <p class="subtitle">Auto VidSrc/VidJoy Generation + Manual Sources + YouTube Trailers</p>
         </header>
 
         <div class="tabs">
@@ -542,28 +542,38 @@
                     </div>
                 </div>
 
+                <div class="grid">
+                    <div class="form-group">
+                        <label>TMDB ID (for auto VidSrc/VidJoy)</label>
+                        <input type="number" id="manual-tmdb-id" placeholder="Enter TMDB ID">
+                        <small>Leave empty if you don't have TMDB ID</small>
+                    </div>
+                    <div class="form-group">
+                        <label>YouTube Trailer URL (optional)</label>
+                        <input type="url" id="manual-youtube" placeholder="https://youtube.com/watch?v=...">
+                        <small>Will be automatically converted to trailer</small>
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label>Video Sources</label>
+                    <label>Additional Manual Sources</label>
+                    <small>VidSrc and VidJoy will be auto-generated if TMDB ID is provided</small>
                     <div id="manual-sources" class="server-list">
                         <div class="server-item">
-                            <input type="text" placeholder="Source Name" class="source-name">
+                            <input type="text" placeholder="Source Name (e.g., Google Drive, Mega)" class="source-name">
                             <input type="url" placeholder="Video URL" class="source-url">
-                            <select class="source-type">
-                                <option value="video">Direct Video</option>
-                                <option value="embed">Embedded</option>
-                                <option value="youtube">YouTube</option>
-                                <option value="live">Live Stream</option>
-                            </select>
                             <select class="source-quality">
+                                <option value="4k">4K</option>
                                 <option value="1080p">1080p</option>
                                 <option value="720p">720p</option>
                                 <option value="480p">480p</option>
-                                <option value="Auto">Auto</option>
+                                <option value="320p">320p</option>
+                                <option value="240p">240p</option>
                             </select>
                             <button class="btn btn-danger btn-small" onclick="removeServer(this)">Remove</button>
                         </div>
                     </div>
-                    <button class="btn btn-secondary btn-small" onclick="addManualSource()">+ Add Source</button>
+                    <button class="btn btn-secondary btn-small" onclick="addManualSource()">+ Add Manual Source</button>
                 </div>
 
                 <div id="series-fields" style="display: none;">
@@ -900,7 +910,7 @@
                  return { movieSources, seriesSources };
              };
              
-             console.log('✅ CineMax Enhanced API Manager loaded!');
+             console.log('✅ Playlist Manager loaded!');
              console.log('🎬 Multi-Server Sources: VidSrc.net + VidJoy.pro (Matching existing app structure)');
              console.log('🔧 Fixed: Root-level movies array for GenreActivity & TV Series');
              console.log('🎯 Fixed: Source kind values - "play" for embeds/live TV, "both" for direct links');
@@ -1589,42 +1599,106 @@
             button.parentElement.remove();
         }
 
+        // Auto-generate VidSrc and VidJoy servers
+        function generateAutoServers(tmdbId, type, seasonNumber = null, episodeNumber = null) {
+            const servers = [];
+            const qualities = ['4k', '1080p', '720p', '480p', '320p', '240p'];
+            
+            if (!tmdbId) return servers;
+            
+            // Generate VidSrc servers
+            qualities.forEach(quality => {
+                let url;
+                if (type === 'series' && seasonNumber && episodeNumber) {
+                    url = `${VIDSRC_BASE}/tv/${tmdbId}/${seasonNumber}/${episodeNumber}`;
+                } else if (type === 'movie') {
+                    url = `${VIDSRC_BASE}/movie/${tmdbId}`;
+                } else {
+                    url = `${VIDSRC_BASE}/movie/${tmdbId}`; // fallback
+                }
+                
+                servers.push({
+                    name: quality,
+                    url: url
+                });
+            });
+            
+            // Generate VidJoy servers
+            qualities.forEach(quality => {
+                let url;
+                if (type === 'series' && seasonNumber && episodeNumber) {
+                    url = `${VIDJOY_BASE}/tv/${tmdbId}/${seasonNumber}/${episodeNumber}`;
+                } else if (type === 'movie') {
+                    url = `${VIDJOY_BASE}/movie/${tmdbId}`;
+                } else {
+                    url = `${VIDJOY_BASE}/movie/${tmdbId}`; // fallback
+                }
+                
+                servers.push({
+                    name: quality,
+                    url: url
+                });
+            });
+            
+            return servers;
+        }
+
+        // Extract YouTube video ID and convert to embed URL
+        function processYouTubeUrl(youtubeUrl) {
+            if (!youtubeUrl) return null;
+            
+            // Extract video ID from various YouTube URL formats
+            const regexes = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+                /youtube\.com\/v\/([^&\n?#]+)/
+            ];
+            
+            for (let regex of regexes) {
+                const match = youtubeUrl.match(regex);
+                if (match) {
+                    return `https://www.youtube.com/embed/${match[1]}`;
+                }
+            }
+            
+            return youtubeUrl; // Return original if no match
+        }
+
         function addManualContent() {
             const type = document.getElementById('manual-type').value;
             const title = document.getElementById('manual-title').value.trim();
+            const tmdbId = document.getElementById('manual-tmdb-id').value.trim();
+            const youtubeUrl = document.getElementById('manual-youtube').value.trim();
             
             if (!title) {
                 showStatus('warning', 'Please enter a title');
                 return;
             }
 
-            // Get sources
+            // Get manual sources
             const sourceInputs = document.querySelectorAll('#manual-sources .server-item');
-            const sources = [];
+            const manualSources = [];
             
             sourceInputs.forEach(item => {
                 const name = item.querySelector('.source-name').value.trim();
                 const url = item.querySelector('.source-url').value.trim();
-                const sourceType = item.querySelector('.source-type').value;
                 const quality = item.querySelector('.source-quality').value;
                 
                 if (name && url) {
-                    sources.push({
-                        id: nextId++,
-                        type: sourceType,
-                        title: `${name} ${quality}`,
-                        quality: quality,
-                        size: sourceType === 'live' ? 'Live' : 'Unknown',
-                        kind: getSourceKind(url),
-                        premium: "false",
-                        external: false,
+                    manualSources.push({
+                        name: quality ? `${name} ${quality}` : name,
                         url: url
                     });
                 }
             });
 
-            if (sources.length === 0) {
-                showStatus('warning', 'Please add at least one video source');
+            // Auto-generate VidSrc and VidJoy servers if TMDB ID is provided
+            const autoServers = generateAutoServers(tmdbId, type);
+            
+            // Combine auto and manual servers
+            const allServers = [...autoServers, ...manualSources];
+
+            if (allServers.length === 0 && !tmdbId) {
+                showStatus('warning', 'Please provide either a TMDB ID or add manual sources');
                 return;
             }
 
@@ -1639,11 +1713,19 @@
                 Thumbnail: document.getElementById('manual-image').value || "",
                 Rating: parseFloat(document.getElementById('manual-rating').value) || 0,
                 Year: parseInt(document.getElementById('manual-year').value) || new Date().getFullYear(),
-                Servers: sources.map(source => ({
-                    name: source.quality || source.title,
-                    url: source.url
-                }))
+                Servers: allServers
             };
+
+            // Add YouTube trailer if provided
+            if (youtubeUrl) {
+                const trailerUrl = processYouTubeUrl(youtubeUrl);
+                entry.Trailer = trailerUrl;
+            }
+
+            // Add TMDB ID if provided
+            if (tmdbId) {
+                entry.TMDB_ID = parseInt(tmdbId);
+            }
 
             if (type === 'series') {
                 entry.Seasons = []; // Initialize empty seasons array
@@ -1674,7 +1756,15 @@
             saveData();
             updateDataStats();
             updatePreview();
-            showStatus('success', `${type} added successfully!`);
+            
+            let successMessage = `${type} added successfully!`;
+            if (tmdbId) {
+                successMessage += ` Auto-generated ${autoServers.length} VidSrc/VidJoy servers.`;
+            }
+            if (youtubeUrl) {
+                successMessage += ` Trailer added.`;
+            }
+            showStatus('success', successMessage);
             
             // Clear form
             document.getElementById('manual-title').value = '';
@@ -1682,23 +1772,21 @@
             document.getElementById('manual-image').value = '';
             document.getElementById('manual-year').value = '';
             document.getElementById('manual-rating').value = '';
+            document.getElementById('manual-tmdb-id').value = '';
+            document.getElementById('manual-youtube').value = '';
             
             // Reset sources to one empty item
             document.getElementById('manual-sources').innerHTML = `
                 <div class="server-item">
-                    <input type="text" placeholder="Source Name" class="source-name">
+                    <input type="text" placeholder="Source Name (e.g., Google Drive, Mega)" class="source-name">
                     <input type="url" placeholder="Video URL" class="source-url">
-                    <select class="source-type">
-                        <option value="video">Direct Video</option>
-                        <option value="embed">Embedded</option>
-                        <option value="youtube">YouTube</option>
-                        <option value="live">Live Stream</option>
-                    </select>
                     <select class="source-quality">
+                        <option value="4k">4K</option>
                         <option value="1080p">1080p</option>
                         <option value="720p">720p</option>
                         <option value="480p">480p</option>
-                        <option value="Auto">Auto</option>
+                        <option value="320p">320p</option>
+                        <option value="240p">240p</option>
                     </select>
                     <button class="btn btn-danger btn-small" onclick="removeServer(this)">Remove</button>
                 </div>
@@ -1924,127 +2012,108 @@
          }
 
                  function exportSample() {
-             const sampleMovie = {
-                 id: 1,
-                 title: "Sample Movie",
-                 type: "movie",
-                 label: "Action",
-                 sublabel: "Released 2023",
-                 imdb: "8.5",
-                 downloadas: "sample-movie.mp4",
-                 comment: true,
-                 playas: "video",
-                 description: "This is a sample movie entry showing the correct CineMax structure",
-                 classification: "PG-13",
-                 year: "2023",
-                 duration: "2:30",
-                 rating: 8.5,
-                 image: "https://example.com/poster.jpg",
-                 cover: "https://example.com/cover.jpg",
-                 genres: [
-                     {
-                         id: 28,
-                         title: "Action"
-                     }
-                 ],
-                 sources: [
-                     {
-                         id: 1,
-                         type: "embed",
-                         title: "VidSrc Server 1080p",
-                         quality: "1080p",
-                         size: "Auto",
-                         kind: "play",
-                         premium: "false",
-                         external: false,
-                         url: "https://vidsrc.net/embed/movie/123"
-                     },
-                     {
-                         id: 2,
-                         type: "embed",
-                         title: "VidJoy Server 1080p",
-                         quality: "1080p", 
-                         size: "Auto",
-                         kind: "play",
-                         premium: "false",
-                         external: false,
-                         url: "https://vidjoy.pro/embed/movie/123"
-                     }
-                 ],
-                 trailer: {
-                     id: 3,
-                     type: "youtube",
-                     title: "Sample Movie Trailer",
-                     url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                 },
-                 actors: [
-                     {
-                         id: 1,
-                         name: "John Doe",
-                         type: "actor",
-                         role: "Lead Actor",
-                         image: "https://example.com/actor.jpg",
-                         bio: "Sample actor"
-                     }
-                 ],
-                 subtitles: [],
-                 views: 5000,
-                 created_at: new Date().toISOString().split('T')[0]
-             };
-
              const sampleData = {
-                 api_info: {
-                     version: "2.0",
-                     description: "Sample CineMax API Format with Complete Structure",
-                     last_updated: new Date().toISOString().split('T')[0],
-                     total_movies: 1,
-                     total_series: 0,
-                     total_channels: 0
-                 },
-                 home: {
-                     slides: [
-                         {
-                             id: 1,
-                             title: "Sample Movie",
-                             type: "movie",
-                             image: "https://example.com/poster.jpg",
-                             url: "movies/1",
-                             poster: sampleMovie
-                         }
-                     ],
-                     featuredMovies: [sampleMovie],
-                     channels: []
-                 },
-                 // Root-level movies array for GenreActivity and other fragments
-                 movies: [sampleMovie],
-                 actors: [
+                 Categories: [
                      {
-                         id: 1,
-                         name: "John Doe",
-                         type: "actor",
-                         role: "Lead Actor",
-                         image: "https://example.com/actor.jpg",
-                         born: "1980-01-01",
-                         height: "6'0\"",
-                         bio: "Sample actor biography",
-                         movies: [
+                         MainCategory: "Movies",
+                         SubCategories: ["Action", "Comedy", "Drama"],
+                         Entries: [
                              {
                                  id: 1,
-                                 title: "Sample Movie",
-                                 image: "https://example.com/poster.jpg",
-                                 year: "2023"
+                                 Title: "Sample Movie",
+                                 SubCategory: "Action",
+                                 Country: "USA",
+                                 Description: "A sample movie showing the complete structure with auto-generated VidSrc/VidJoy servers and manual sources.",
+                                 Poster: "https://image.tmdb.org/t/p/w500/sample-poster.jpg",
+                                 Thumbnail: "https://image.tmdb.org/t/p/w500/sample-poster.jpg",
+                                 Rating: 8.5,
+                                 Year: 2023,
+                                 TMDB_ID: 550,
+                                 Trailer: "https://www.youtube.com/embed/sample-trailer",
+                                 Servers: [
+                                     // Auto-generated VidSrc servers
+                                     { name: "4k", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "1080p", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "720p", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "480p", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "320p", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "240p", url: "https://vidsrc.net/embed/movie/550" },
+                                     // Auto-generated VidJoy servers
+                                     { name: "4k", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "1080p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "720p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "480p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "320p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "240p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     // Manual servers
+                                     { name: "Google Drive 1080p", url: "https://drive.google.com/file/d/sample/view" },
+                                     { name: "Mega.nz 720p", url: "https://mega.nz/file/sample" }
+                                 ]
+                             }
+                         ]
+                     },
+                     {
+                         MainCategory: "TV Series",
+                         SubCategories: ["Anime", "Action", "Drama"],
+                         Entries: [
+                             {
+                                 id: 2,
+                                 Title: "Sample TV Series",
+                                 SubCategory: "Action",
+                                 Country: "Japan",
+                                 Description: "A sample TV series with seasons and episodes structure.",
+                                 Poster: "https://image.tmdb.org/t/p/w500/sample-series.jpg",
+                                 Thumbnail: "https://image.tmdb.org/t/p/w500/sample-series.jpg",
+                                 Rating: 9.0,
+                                 Year: 2023,
+                                 TMDB_ID: 1399,
+                                 Trailer: "https://www.youtube.com/embed/sample-series-trailer",
+                                 Seasons: [
+                                     {
+                                         Season: 1,
+                                         SeasonPoster: "https://image.tmdb.org/t/p/w500/sample-season1.jpg",
+                                         Episodes: [
+                                             {
+                                                 Episode: 1,
+                                                 Title: "Pilot Episode",
+                                                 Duration: "00:45:00",
+                                                 Description: "The first episode of the series",
+                                                 Thumbnail: "https://image.tmdb.org/t/p/w500/sample-episode.jpg",
+                                                 Servers: [
+                                                     // Auto-generated for episodes
+                                                     { name: "1080p", url: "https://vidsrc.net/embed/tv/1399/1/1" },
+                                                     { name: "720p", url: "https://vidsrc.net/embed/tv/1399/1/1" },
+                                                     { name: "1080p", url: "https://vidjoy.pro/embed/tv/1399/1/1" },
+                                                     { name: "720p", url: "https://vidjoy.pro/embed/tv/1399/1/1" }
+                                                 ]
+                                             }
+                                         ]
+                                     }
+                                 ]
+                             }
+                         ]
+                     },
+                     {
+                         MainCategory: "Live TV",
+                         SubCategories: ["News", "Sports", "Entertainment"],
+                         Entries: [
+                             {
+                                 id: 3,
+                                 Title: "Sample Live Channel",
+                                 SubCategory: "News",
+                                 Country: "USA",
+                                 Description: "A sample live TV channel",
+                                 Poster: "https://example.com/channel-logo.jpg",
+                                 Thumbnail: "https://example.com/channel-logo.jpg",
+                                 Rating: 7.5,
+                                 Servers: [
+                                     { name: "HD Stream", url: "https://example.com/live-stream.m3u8" },
+                                     { name: "SD Stream", url: "https://example.com/live-stream-sd.m3u8" }
+                                 ]
                              }
                          ]
                      }
-                 ],
-                 genres: [
-                     {
-                         id: 28,
-                         title: "Action",
-                         posters: [sampleMovie]
-                     }
-                 ],
-                 channels: []
+                 ]
              };
             
             const dataStr = JSON.stringify(sampleData, null, 2);
@@ -2052,10 +2121,10 @@
             
             const link = document.createElement('a');
             link.href = URL.createObjectURL(dataBlob);
-            link.download = 'cinemax-sample-format.json';
+            link.download = 'playlist-sample-format.json';
             link.click();
             
-            showStatus('success', 'Sample format exported!');
+            showStatus('success', 'Sample format exported with auto-generated servers and trailers!');
         }
 
         function clearAllData() {
@@ -2156,17 +2225,37 @@
                     typeDisplay += ` (${item.SubCategory})`;
                 }
                 
+                // Count auto-generated vs manual servers
+                let autoServers = 0;
+                let manualServers = 0;
+                if (item.Servers) {
+                    item.Servers.forEach(server => {
+                        if (server.url && (server.url.includes('vidsrc.net') || server.url.includes('vidjoy.pro'))) {
+                            autoServers++;
+                        } else {
+                            manualServers++;
+                        }
+                    });
+                }
+
                 div.innerHTML = `
                     <img src="${item.Poster || item.Thumbnail || 'https://via.placeholder.com/300x450?text=No+Image'}" 
                          alt="${item.Title}" loading="lazy">
                     <div class="info">
                         <div class="title">${item.Title || 'Untitled'}</div>
                         <div class="meta">${item.Year || 'Unknown'} • ${typeDisplay} • Rating: ${item.Rating || 'N/A'}</div>
-                        <div class="meta">Servers: ${item.Servers?.length || 0}</div>
+                        <div class="meta">
+                            Servers: ${item.Servers?.length || 0} 
+                            ${autoServers > 0 ? `(${autoServers} auto)` : ''}
+                            ${manualServers > 0 ? `(${manualServers} manual)` : ''}
+                        </div>
                         ${item.Seasons ? `<div class="meta">Seasons: ${item.Seasons.length}</div>` : ''}
+                        ${item.Trailer ? `<div class="meta">🎬 Has Trailer</div>` : ''}
+                        ${item.TMDB_ID ? `<div class="meta">📺 TMDB: ${item.TMDB_ID}</div>` : ''}
                         <div style="margin-top: 10px;">
                             <button class="btn btn-secondary btn-small" onclick="editContent('${item.id}', '${item.mainCategory}')">Edit</button>
                             <button class="btn btn-danger btn-small" onclick="deleteContent('${item.id}', '${item.mainCategory}')">Delete</button>
+                            ${item.Trailer ? `<button class="btn btn-info btn-small" onclick="window.open('${item.Trailer}', '_blank')">🎬 Trailer</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -2223,6 +2312,15 @@
                     <label>Poster URL</label>
                     <input type="url" id="edit-poster" value="${content.Poster || ''}">
                 </div>
+                <div class="form-group">
+                    <label>TMDB ID</label>
+                    <input type="number" id="edit-tmdb-id" value="${content.TMDB_ID || ''}">
+                    <small>Changing this will regenerate VidSrc/VidJoy servers</small>
+                </div>
+                <div class="form-group">
+                    <label>YouTube Trailer URL</label>
+                    <input type="url" id="edit-trailer" value="${content.Trailer || ''}">
+                </div>
                 <input type="hidden" id="edit-id" value="${id}">
                 <input type="hidden" id="edit-category" value="${mainCategory}">
                 <input type="hidden" id="edit-category-index" value="${categoryIndex}">
@@ -2243,8 +2341,11 @@
             const year = document.getElementById('edit-year').value;
             const rating = parseFloat(document.getElementById('edit-rating').value);
             const poster = document.getElementById('edit-poster').value;
+            const tmdbId = document.getElementById('edit-tmdb-id').value;
+            const trailer = document.getElementById('edit-trailer').value;
             const categoryIndex = parseInt(document.getElementById('edit-category-index').value);
             const entryIndex = parseInt(document.getElementById('edit-entry-index').value);
+            const category = document.getElementById('edit-category').value;
             
             // Update the content in Categories structure
             if (categoryIndex >= 0 && entryIndex >= 0 && 
@@ -2252,6 +2353,8 @@
                 currentData.Categories[categoryIndex].Entries[entryIndex]) {
                 
                 const content = currentData.Categories[categoryIndex].Entries[entryIndex];
+                const oldTmdbId = content.TMDB_ID;
+                
                 content.Title = title;
                 content.Description = description;
                 content.Year = year;
@@ -2261,10 +2364,46 @@
                     content.Thumbnail = poster; // Use poster as thumbnail if not set
                 }
                 
+                // Handle TMDB ID changes
+                if (tmdbId && tmdbId !== oldTmdbId) {
+                    content.TMDB_ID = parseInt(tmdbId);
+                    
+                    // Regenerate auto servers, keeping manual ones
+                    const manualServers = content.Servers ? content.Servers.filter(server => 
+                        !server.url.includes('vidsrc.net') && !server.url.includes('vidjoy.pro')
+                    ) : [];
+                    
+                    // Determine content type from category
+                    let contentType = 'movie';
+                    if (category === 'TV Series') contentType = 'series';
+                    else if (category === 'Live TV') contentType = 'live';
+                    
+                    const autoServers = generateAutoServers(tmdbId, contentType);
+                    content.Servers = [...autoServers, ...manualServers];
+                } else if (!tmdbId && oldTmdbId) {
+                    // TMDB ID removed, keep only manual servers
+                    delete content.TMDB_ID;
+                    content.Servers = content.Servers ? content.Servers.filter(server => 
+                        !server.url.includes('vidsrc.net') && !server.url.includes('vidjoy.pro')
+                    ) : [];
+                }
+                
+                // Handle trailer
+                if (trailer) {
+                    content.Trailer = processYouTubeUrl(trailer);
+                } else {
+                    delete content.Trailer;
+                }
+                
                 saveData();
                 updatePreview();
                 closeEditModal();
-                showStatus('success', 'Content updated successfully!');
+                
+                let message = 'Content updated successfully!';
+                if (tmdbId && tmdbId !== oldTmdbId) {
+                    message += ' Auto-servers regenerated.';
+                }
+                showStatus('success', message);
             } else {
                 showStatus('error', 'Failed to update content');
             }
