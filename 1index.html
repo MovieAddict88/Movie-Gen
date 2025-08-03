@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineMax Enhanced API Manager</title>
+    <title>Playlist Manager - Auto VidSrc/VidJoy + Manual Sources</title>
     <style>
         :root {
             --primary: #e50914;
@@ -412,8 +412,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎬 CineMax Enhanced API Manager</h1>
-            <p class="subtitle">Complete TMDB Integration with Automatic Video Sources & Advanced Management</p>
+            <h1>🎬 Playlist Manager</h1>
+            <p class="subtitle">Auto VidSrc/VidJoy Generation + Manual Sources + YouTube Trailers</p>
         </header>
 
         <div class="tabs">
@@ -542,28 +542,38 @@
                     </div>
                 </div>
 
+                <div class="grid">
+                    <div class="form-group">
+                        <label>TMDB ID (for auto VidSrc/VidJoy)</label>
+                        <input type="number" id="manual-tmdb-id" placeholder="Enter TMDB ID">
+                        <small>Leave empty if you don't have TMDB ID</small>
+                    </div>
+                    <div class="form-group">
+                        <label>YouTube Trailer URL (optional)</label>
+                        <input type="url" id="manual-youtube" placeholder="https://youtube.com/watch?v=...">
+                        <small>Will be automatically converted to trailer</small>
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label>Video Sources</label>
+                    <label>Additional Manual Sources</label>
+                    <small>VidSrc and VidJoy will be auto-generated if TMDB ID is provided</small>
                     <div id="manual-sources" class="server-list">
                         <div class="server-item">
-                            <input type="text" placeholder="Source Name" class="source-name">
+                            <input type="text" placeholder="Source Name (e.g., Google Drive, Mega)" class="source-name">
                             <input type="url" placeholder="Video URL" class="source-url">
-                            <select class="source-type">
-                                <option value="video">Direct Video</option>
-                                <option value="embed">Embedded</option>
-                                <option value="youtube">YouTube</option>
-                                <option value="live">Live Stream</option>
-                            </select>
                             <select class="source-quality">
+                                <option value="4k">4K</option>
                                 <option value="1080p">1080p</option>
                                 <option value="720p">720p</option>
                                 <option value="480p">480p</option>
-                                <option value="Auto">Auto</option>
+                                <option value="320p">320p</option>
+                                <option value="240p">240p</option>
                             </select>
                             <button class="btn btn-danger btn-small" onclick="removeServer(this)">Remove</button>
                         </div>
                     </div>
-                    <button class="btn btn-secondary btn-small" onclick="addManualSource()">+ Add Source</button>
+                    <button class="btn btn-secondary btn-small" onclick="addManualSource()">+ Add Manual Source</button>
                 </div>
 
                 <div id="series-fields" style="display: none;">
@@ -717,21 +727,25 @@
         const VIDSRC_BASE = 'https://vidsrc.net/embed';
         const VIDJOY_BASE = 'https://vidjoy.pro/embed';
 
-        // Global data storage
+        // Global data storage - updated to match JSON structure
         let currentData = {
-            api_info: {
-                version: "2.0",
-                description: "Enhanced CineMax API with TMDB Integration",
-                last_updated: new Date().toISOString().split('T')[0],
-                total_movies: 0,
-                total_series: 0,
-                total_channels: 0
-            },
-            home: {
-                slides: [],
-                featuredMovies: [],
-                channels: []
-            }
+            Categories: [
+                {
+                    MainCategory: "Live TV",
+                    SubCategories: [""],
+                    Entries: []
+                },
+                {
+                    MainCategory: "Movies", 
+                    SubCategories: ["Action", "Comedy", "Drama", "Horror", "Sci-Fi"],
+                    Entries: []
+                },
+                {
+                    MainCategory: "TV Series",
+                    SubCategories: ["Anime", "Action", "Comedy", "Drama"],
+                    Entries: []
+                }
+            ]
         };
 
         let nextId = 1;
@@ -896,7 +910,7 @@
                  return { movieSources, seriesSources };
              };
              
-             console.log('✅ CineMax Enhanced API Manager loaded!');
+             console.log('✅ Playlist Manager loaded!');
              console.log('🎬 Multi-Server Sources: VidSrc.net + VidJoy.pro (Matching existing app structure)');
              console.log('🔧 Fixed: Root-level movies array for GenreActivity & TV Series');
              console.log('🎯 Fixed: Source kind values - "play" for embeds/live TV, "both" for direct links');
@@ -1585,131 +1599,172 @@
             button.parentElement.remove();
         }
 
+        // Auto-generate VidSrc and VidJoy servers
+        function generateAutoServers(tmdbId, type, seasonNumber = null, episodeNumber = null) {
+            const servers = [];
+            const qualities = ['4k', '1080p', '720p', '480p', '320p', '240p'];
+            
+            if (!tmdbId) return servers;
+            
+            // Generate VidSrc servers
+            qualities.forEach(quality => {
+                let url;
+                if (type === 'series' && seasonNumber && episodeNumber) {
+                    url = `${VIDSRC_BASE}/tv/${tmdbId}/${seasonNumber}/${episodeNumber}`;
+                } else if (type === 'movie') {
+                    url = `${VIDSRC_BASE}/movie/${tmdbId}`;
+                } else {
+                    url = `${VIDSRC_BASE}/movie/${tmdbId}`; // fallback
+                }
+                
+                servers.push({
+                    name: quality,
+                    url: url
+                });
+            });
+            
+            // Generate VidJoy servers
+            qualities.forEach(quality => {
+                let url;
+                if (type === 'series' && seasonNumber && episodeNumber) {
+                    url = `${VIDJOY_BASE}/tv/${tmdbId}/${seasonNumber}/${episodeNumber}`;
+                } else if (type === 'movie') {
+                    url = `${VIDJOY_BASE}/movie/${tmdbId}`;
+                } else {
+                    url = `${VIDJOY_BASE}/movie/${tmdbId}`; // fallback
+                }
+                
+                servers.push({
+                    name: quality,
+                    url: url
+                });
+            });
+            
+            return servers;
+        }
+
+        // Extract YouTube video ID and convert to embed URL
+        function processYouTubeUrl(youtubeUrl) {
+            if (!youtubeUrl) return null;
+            
+            // Extract video ID from various YouTube URL formats
+            const regexes = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+                /youtube\.com\/v\/([^&\n?#]+)/
+            ];
+            
+            for (let regex of regexes) {
+                const match = youtubeUrl.match(regex);
+                if (match) {
+                    return `https://www.youtube.com/embed/${match[1]}`;
+                }
+            }
+            
+            return youtubeUrl; // Return original if no match
+        }
+
         function addManualContent() {
             const type = document.getElementById('manual-type').value;
             const title = document.getElementById('manual-title').value.trim();
+            const tmdbId = document.getElementById('manual-tmdb-id').value.trim();
+            const youtubeUrl = document.getElementById('manual-youtube').value.trim();
             
             if (!title) {
                 showStatus('warning', 'Please enter a title');
                 return;
             }
 
-            // Get sources
+            // Get manual sources
             const sourceInputs = document.querySelectorAll('#manual-sources .server-item');
-            const sources = [];
+            const manualSources = [];
             
             sourceInputs.forEach(item => {
                 const name = item.querySelector('.source-name').value.trim();
                 const url = item.querySelector('.source-url').value.trim();
-                const sourceType = item.querySelector('.source-type').value;
                 const quality = item.querySelector('.source-quality').value;
                 
                 if (name && url) {
-                    sources.push({
-                        id: nextId++,
-                        type: sourceType,
-                        title: `${name} ${quality}`,
-                        quality: quality,
-                        size: sourceType === 'live' ? 'Live' : 'Unknown',
-                        kind: getSourceKind(url),
-                        premium: "false",
-                        external: false,
+                    manualSources.push({
+                        name: quality ? `${name} ${quality}` : name,
                         url: url
                     });
                 }
             });
 
-            if (sources.length === 0) {
-                showStatus('warning', 'Please add at least one video source');
+            // Auto-generate VidSrc and VidJoy servers if TMDB ID is provided
+            const autoServers = generateAutoServers(tmdbId, type);
+            
+            // Combine auto and manual servers
+            const allServers = [...autoServers, ...manualSources];
+
+            if (allServers.length === 0 && !tmdbId) {
+                showStatus('warning', 'Please provide either a TMDB ID or add manual sources');
                 return;
             }
 
-            const content = {
+            // Create entry in the new Categories format
+            const entry = {
                 id: nextId++,
-                title: title,
-                type: type,
-                label: type === 'live' ? 'Live TV' : (type === 'series' ? 'Series' : 'Movie'),
-                sublabel: document.getElementById('manual-year').value || 'Unknown Year',
-                imdb: document.getElementById('manual-rating').value || "0",
-                downloadas: title.toLowerCase().replace(/\s+/g, '-'),
-                comment: true,
-                playas: type === 'live' ? 'live' : 'video',
-                description: document.getElementById('manual-description').value || 'No description available',
-                classification: 'PG-13',
-                year: document.getElementById('manual-year').value || 'Unknown',
-                duration: type === 'live' ? 'Live' : 'Unknown',
-                rating: parseFloat(document.getElementById('manual-rating').value) || 0,
-                image: document.getElementById('manual-image').value || null,
-                cover: document.getElementById('manual-image').value || null,
-                genres: [],
-                sources: sources,
-                trailer: null,
-                actors: [],
-                subtitles: [],
-                views: Math.floor(Math.random() * 1000) + 100,
-                created_at: new Date().toISOString().split('T')[0]
+                Title: title,
+                SubCategory: "", // Could be enhanced to get from a dropdown
+                Country: "",
+                Description: document.getElementById('manual-description').value || 'No description available',
+                Poster: document.getElementById('manual-image').value || "",
+                Thumbnail: document.getElementById('manual-image').value || "",
+                Rating: parseFloat(document.getElementById('manual-rating').value) || 0,
+                Year: parseInt(document.getElementById('manual-year').value) || new Date().getFullYear(),
+                Servers: allServers
             };
 
-            if (type === 'series') {
-                content.seasons = []; // Would need to implement season/episode creation
+            // Add YouTube trailer if provided
+            if (youtubeUrl) {
+                const trailerUrl = processYouTubeUrl(youtubeUrl);
+                entry.Trailer = trailerUrl;
             }
 
-            // Add to appropriate collection
+            // Add TMDB ID if provided
+            if (tmdbId) {
+                entry.TMDB_ID = parseInt(tmdbId);
+            }
+
+            if (type === 'series') {
+                entry.Seasons = []; // Initialize empty seasons array
+            }
+
+            // Find the appropriate category and add the entry
+            let categoryName;
             if (type === 'live') {
-                if (!currentData.home.channels) currentData.home.channels = [];
-                
-                const channel = {
-                    id: content.id,
-                    title: content.title,
-                    label: content.label,
-                    sublabel: content.sublabel,
-                    description: content.description,
-                    website: "",
-                    classification: content.classification,
-                    views: content.views,
-                    shares: Math.floor(content.views * 0.1),
-                    rating: content.rating,
-                    comment: content.comment,
-                    image: content.image,
-                    playas: "live",
-                    sources: content.sources,
-                    categories: [],
-                    countries: []
-                };
-                
-                currentData.home.channels.push(channel);
-                currentData.api_info.total_channels++;
-                
-                // Ensure channel has actors and genres arrays (even if empty)
-                if (!channel.actors) channel.actors = [];
-                if (!channel.genres) channel.genres = [];
+                categoryName = 'Live TV';
+            } else if (type === 'movie') {
+                categoryName = 'Movies';
+            } else if (type === 'series') {
+                categoryName = 'TV Series';
+            }
+
+            const category = currentData.Categories.find(cat => cat.MainCategory === categoryName);
+            if (category) {
+                category.Entries.push(entry);
             } else {
-                currentData.home.slides.push({
-                    id: content.id,
-                    title: content.title,
-                    type: content.type,
-                    image: content.image,
-                    url: `${content.type}s/${content.id}`,
-                    poster: content
+                // Create category if it doesn't exist
+                currentData.Categories.push({
+                    MainCategory: categoryName,
+                    SubCategories: [""],
+                    Entries: [entry]
                 });
-                
-                currentData.home.featuredMovies.push(content);
-                
-                // Ensure content has actors and genres arrays (even if empty)
-                if (!content.actors) content.actors = [];
-                if (!content.genres) content.genres = [];
-                
-                if (type === 'movie') {
-                    currentData.api_info.total_movies++;
-                } else {
-                    currentData.api_info.total_series++;
-                }
             }
 
             saveData();
             updateDataStats();
             updatePreview();
-            showStatus('success', `${type} added successfully!`);
+            
+            let successMessage = `${type} added successfully!`;
+            if (tmdbId) {
+                successMessage += ` Auto-generated ${autoServers.length} VidSrc/VidJoy servers.`;
+            }
+            if (youtubeUrl) {
+                successMessage += ` Trailer added.`;
+            }
+            showStatus('success', successMessage);
             
             // Clear form
             document.getElementById('manual-title').value = '';
@@ -1717,23 +1772,21 @@
             document.getElementById('manual-image').value = '';
             document.getElementById('manual-year').value = '';
             document.getElementById('manual-rating').value = '';
+            document.getElementById('manual-tmdb-id').value = '';
+            document.getElementById('manual-youtube').value = '';
             
             // Reset sources to one empty item
             document.getElementById('manual-sources').innerHTML = `
                 <div class="server-item">
-                    <input type="text" placeholder="Source Name" class="source-name">
+                    <input type="text" placeholder="Source Name (e.g., Google Drive, Mega)" class="source-name">
                     <input type="url" placeholder="Video URL" class="source-url">
-                    <select class="source-type">
-                        <option value="video">Direct Video</option>
-                        <option value="embed">Embedded</option>
-                        <option value="youtube">YouTube</option>
-                        <option value="live">Live Stream</option>
-                    </select>
                     <select class="source-quality">
+                        <option value="4k">4K</option>
                         <option value="1080p">1080p</option>
                         <option value="720p">720p</option>
                         <option value="480p">480p</option>
-                        <option value="Auto">Auto</option>
+                        <option value="320p">320p</option>
+                        <option value="240p">240p</option>
                     </select>
                     <button class="btn btn-danger btn-small" onclick="removeServer(this)">Remove</button>
                 </div>
@@ -1854,36 +1907,85 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
                     
-                    // Validate data structure
-                    if (!importedData.home || !importedData.api_info) {
-                        throw new Error('Invalid data format');
+                    // Validate the new Categories data structure
+                    if (!importedData.Categories || !Array.isArray(importedData.Categories)) {
+                        throw new Error('Invalid data format. Expected Categories array structure.');
+                    }
+                    
+                    // Validate category structure
+                    for (let category of importedData.Categories) {
+                        if (!category.MainCategory || !Array.isArray(category.Entries)) {
+                            throw new Error('Invalid category structure. Each category must have MainCategory and Entries array.');
+                        }
                     }
                     
                     currentData = importedData;
                     
                     // Update next ID to prevent conflicts
                     let maxId = 0;
-                    const allItems = [
-                        ...(currentData.home.slides || []),
-                        ...(currentData.home.featuredMovies || []),
-                        ...(currentData.home.channels || [])
-                    ];
-                    
-                    allItems.forEach(item => {
-                        if (item.id > maxId) maxId = item.id;
-                        if (item.sources) {
-                            item.sources.forEach(source => {
-                                if (source.id > maxId) maxId = source.id;
-                            });
-                        }
+                    currentData.Categories.forEach(category => {
+                        category.Entries.forEach(entry => {
+                            // Add IDs if missing
+                            if (!entry.id) {
+                                entry.id = ++maxId;
+                            } else if (entry.id > maxId) {
+                                maxId = entry.id;
+                            }
+                            
+                            if (entry.Servers) {
+                                entry.Servers.forEach(server => {
+                                    if (!server.id) {
+                                        server.id = ++maxId;
+                                    } else if (server.id > maxId) {
+                                        maxId = server.id;
+                                    }
+                                });
+                            }
+                            
+                            if (entry.Seasons) {
+                                entry.Seasons.forEach(season => {
+                                    if (!season.id) {
+                                        season.id = ++maxId;
+                                    } else if (season.id > maxId) {
+                                        maxId = season.id;
+                                    }
+                                    
+                                    if (season.Episodes) {
+                                        season.Episodes.forEach(episode => {
+                                            if (!episode.id) {
+                                                episode.id = ++maxId;
+                                            } else if (episode.id > maxId) {
+                                                maxId = episode.id;
+                                            }
+                                            
+                                            if (episode.Servers) {
+                                                episode.Servers.forEach(server => {
+                                                    if (!server.id) {
+                                                        server.id = ++maxId;
+                                                    } else if (server.id > maxId) {
+                                                        maxId = server.id;
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
                     });
                     
                     nextId = maxId + 1;
                     
+                    // Count total items
+                    let totalItems = 0;
+                    currentData.Categories.forEach(category => {
+                        totalItems += category.Entries.length;
+                    });
+                    
                     saveData();
                     updateDataStats();
                     updatePreview();
-                    showStatus('success', 'Data imported successfully!');
+                    showStatus('success', `Data imported successfully! Loaded ${totalItems} items.`);
                 } catch (error) {
                     showStatus('error', `Import failed: ${error.message}`);
                 }
@@ -1893,34 +1995,9 @@
         }
 
                  function exportData() {
-             // Create the complete CineMax API structure with root-level movies array
-             // Limit slides to top-rated content (highest rating first)
-             const limitedSlides = (currentData.home.slides || [])
-                 .sort((a, b) => {
-                     const ratingA = a.poster?.rating || a.rating || 0;
-                     const ratingB = b.poster?.rating || b.rating || 0;
-                     return ratingB - ratingA; // Sort by highest rating first
-                 })
-                 .slice(0, 10); // Limit to top 10 highest rated items
-             
+             // Export in the Categories format to match the JSON structure
              const exportData = {
-                 ...currentData,
-                 home: {
-                     ...currentData.home,
-                     slides: limitedSlides, // Use limited slides instead of all slides
-                     // Add featuredMovies INSIDE home object for LoadActivity compatibility
-                     featuredMovies: currentData.home.featuredMovies || [],
-                     // Add actors and genres INSIDE home object for HomeFragment compatibility
-                     actors: generateActorsFromContent() || [],
-                     genres: generateGenresFromContent() || []
-                 },
-                 // Add root-level movies array that includes both movies and series
-                 movies: currentData.home.featuredMovies || [],
-                 // Keep root-level arrays for other fragments compatibility
-                 actors: generateActorsFromContent() || [],
-                 genres: generateGenresFromContent() || [],
-                 // Ensure channels array is present
-                 channels: currentData.channels || []
+                 Categories: currentData.Categories || []
              };
              
              const dataStr = JSON.stringify(exportData, null, 2);
@@ -1928,134 +2005,115 @@
              
              const link = document.createElement('a');
              link.href = URL.createObjectURL(dataBlob);
-             link.download = `cinemax-data-${new Date().toISOString().split('T')[0]}.json`;
+             link.download = `playlist-data-${new Date().toISOString().split('T')[0]}.json`;
              link.click();
              
-             showStatus('success', 'Data exported successfully with root-level movies array!');
+             showStatus('success', 'Data exported successfully in Categories format!');
          }
 
                  function exportSample() {
-             const sampleMovie = {
-                 id: 1,
-                 title: "Sample Movie",
-                 type: "movie",
-                 label: "Action",
-                 sublabel: "Released 2023",
-                 imdb: "8.5",
-                 downloadas: "sample-movie.mp4",
-                 comment: true,
-                 playas: "video",
-                 description: "This is a sample movie entry showing the correct CineMax structure",
-                 classification: "PG-13",
-                 year: "2023",
-                 duration: "2:30",
-                 rating: 8.5,
-                 image: "https://example.com/poster.jpg",
-                 cover: "https://example.com/cover.jpg",
-                 genres: [
-                     {
-                         id: 28,
-                         title: "Action"
-                     }
-                 ],
-                 sources: [
-                     {
-                         id: 1,
-                         type: "embed",
-                         title: "VidSrc Server 1080p",
-                         quality: "1080p",
-                         size: "Auto",
-                         kind: "play",
-                         premium: "false",
-                         external: false,
-                         url: "https://vidsrc.net/embed/movie/123"
-                     },
-                     {
-                         id: 2,
-                         type: "embed",
-                         title: "VidJoy Server 1080p",
-                         quality: "1080p", 
-                         size: "Auto",
-                         kind: "play",
-                         premium: "false",
-                         external: false,
-                         url: "https://vidjoy.pro/embed/movie/123"
-                     }
-                 ],
-                 trailer: {
-                     id: 3,
-                     type: "youtube",
-                     title: "Sample Movie Trailer",
-                     url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                 },
-                 actors: [
-                     {
-                         id: 1,
-                         name: "John Doe",
-                         type: "actor",
-                         role: "Lead Actor",
-                         image: "https://example.com/actor.jpg",
-                         bio: "Sample actor"
-                     }
-                 ],
-                 subtitles: [],
-                 views: 5000,
-                 created_at: new Date().toISOString().split('T')[0]
-             };
-
              const sampleData = {
-                 api_info: {
-                     version: "2.0",
-                     description: "Sample CineMax API Format with Complete Structure",
-                     last_updated: new Date().toISOString().split('T')[0],
-                     total_movies: 1,
-                     total_series: 0,
-                     total_channels: 0
-                 },
-                 home: {
-                     slides: [
-                         {
-                             id: 1,
-                             title: "Sample Movie",
-                             type: "movie",
-                             image: "https://example.com/poster.jpg",
-                             url: "movies/1",
-                             poster: sampleMovie
-                         }
-                     ],
-                     featuredMovies: [sampleMovie],
-                     channels: []
-                 },
-                 // Root-level movies array for GenreActivity and other fragments
-                 movies: [sampleMovie],
-                 actors: [
+                 Categories: [
                      {
-                         id: 1,
-                         name: "John Doe",
-                         type: "actor",
-                         role: "Lead Actor",
-                         image: "https://example.com/actor.jpg",
-                         born: "1980-01-01",
-                         height: "6'0\"",
-                         bio: "Sample actor biography",
-                         movies: [
+                         MainCategory: "Movies",
+                         SubCategories: ["Action", "Comedy", "Drama"],
+                         Entries: [
                              {
                                  id: 1,
-                                 title: "Sample Movie",
-                                 image: "https://example.com/poster.jpg",
-                                 year: "2023"
+                                 Title: "Sample Movie",
+                                 SubCategory: "Action",
+                                 Country: "USA",
+                                 Description: "A sample movie showing the complete structure with auto-generated VidSrc/VidJoy servers and manual sources.",
+                                 Poster: "https://image.tmdb.org/t/p/w500/sample-poster.jpg",
+                                 Thumbnail: "https://image.tmdb.org/t/p/w500/sample-poster.jpg",
+                                 Rating: 8.5,
+                                 Year: 2023,
+                                 TMDB_ID: 550,
+                                 Trailer: "https://www.youtube.com/embed/sample-trailer",
+                                 Servers: [
+                                     // Auto-generated VidSrc servers
+                                     { name: "4k", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "1080p", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "720p", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "480p", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "320p", url: "https://vidsrc.net/embed/movie/550" },
+                                     { name: "240p", url: "https://vidsrc.net/embed/movie/550" },
+                                     // Auto-generated VidJoy servers
+                                     { name: "4k", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "1080p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "720p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "480p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "320p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     { name: "240p", url: "https://vidjoy.pro/embed/movie/550" },
+                                     // Manual servers
+                                     { name: "Google Drive 1080p", url: "https://drive.google.com/file/d/sample/view" },
+                                     { name: "Mega.nz 720p", url: "https://mega.nz/file/sample" }
+                                 ]
+                             }
+                         ]
+                     },
+                     {
+                         MainCategory: "TV Series",
+                         SubCategories: ["Anime", "Action", "Drama"],
+                         Entries: [
+                             {
+                                 id: 2,
+                                 Title: "Sample TV Series",
+                                 SubCategory: "Action",
+                                 Country: "Japan",
+                                 Description: "A sample TV series with seasons and episodes structure.",
+                                 Poster: "https://image.tmdb.org/t/p/w500/sample-series.jpg",
+                                 Thumbnail: "https://image.tmdb.org/t/p/w500/sample-series.jpg",
+                                 Rating: 9.0,
+                                 Year: 2023,
+                                 TMDB_ID: 1399,
+                                 Trailer: "https://www.youtube.com/embed/sample-series-trailer",
+                                 Seasons: [
+                                     {
+                                         Season: 1,
+                                         SeasonPoster: "https://image.tmdb.org/t/p/w500/sample-season1.jpg",
+                                         Episodes: [
+                                             {
+                                                 Episode: 1,
+                                                 Title: "Pilot Episode",
+                                                 Duration: "00:45:00",
+                                                 Description: "The first episode of the series",
+                                                 Thumbnail: "https://image.tmdb.org/t/p/w500/sample-episode.jpg",
+                                                 Servers: [
+                                                     // Auto-generated for episodes
+                                                     { name: "1080p", url: "https://vidsrc.net/embed/tv/1399/1/1" },
+                                                     { name: "720p", url: "https://vidsrc.net/embed/tv/1399/1/1" },
+                                                     { name: "1080p", url: "https://vidjoy.pro/embed/tv/1399/1/1" },
+                                                     { name: "720p", url: "https://vidjoy.pro/embed/tv/1399/1/1" }
+                                                 ]
+                                             }
+                                         ]
+                                     }
+                                 ]
+                             }
+                         ]
+                     },
+                     {
+                         MainCategory: "Live TV",
+                         SubCategories: ["News", "Sports", "Entertainment"],
+                         Entries: [
+                             {
+                                 id: 3,
+                                 Title: "Sample Live Channel",
+                                 SubCategory: "News",
+                                 Country: "USA",
+                                 Description: "A sample live TV channel",
+                                 Poster: "https://example.com/channel-logo.jpg",
+                                 Thumbnail: "https://example.com/channel-logo.jpg",
+                                 Rating: 7.5,
+                                 Servers: [
+                                     { name: "HD Stream", url: "https://example.com/live-stream.m3u8" },
+                                     { name: "SD Stream", url: "https://example.com/live-stream-sd.m3u8" }
+                                 ]
                              }
                          ]
                      }
-                 ],
-                 genres: [
-                     {
-                         id: 28,
-                         title: "Action",
-                         posters: [sampleMovie]
-                     }
-                 ],
-                 channels: []
+                 ]
              };
             
             const dataStr = JSON.stringify(sampleData, null, 2);
@@ -2063,28 +2121,32 @@
             
             const link = document.createElement('a');
             link.href = URL.createObjectURL(dataBlob);
-            link.download = 'cinemax-sample-format.json';
+            link.download = 'playlist-sample-format.json';
             link.click();
             
-            showStatus('success', 'Sample format exported!');
+            showStatus('success', 'Sample format exported with auto-generated servers and trailers!');
         }
 
         function clearAllData() {
             if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
                 currentData = {
-                    api_info: {
-                        version: "2.0",
-                        description: "Enhanced CineMax API with TMDB Integration",
-                        last_updated: new Date().toISOString().split('T')[0],
-                        total_movies: 0,
-                        total_series: 0,
-                        total_channels: 0
-                    },
-                    home: {
-                        slides: [],
-                        featuredMovies: [],
-                        channels: []
-                    }
+                    Categories: [
+                        {
+                            MainCategory: "Live TV",
+                            SubCategories: [""],
+                            Entries: []
+                        },
+                        {
+                            MainCategory: "Movies", 
+                            SubCategories: ["Action", "Comedy", "Drama", "Horror", "Sci-Fi"],
+                            Entries: []
+                        },
+                        {
+                            MainCategory: "TV Series",
+                            SubCategories: ["Anime", "Action", "Comedy", "Drama"],
+                            Entries: []
+                        }
+                    ]
                 };
                 
                 nextId = 1;
@@ -2096,30 +2158,31 @@
         }
 
         function removeDuplicates() {
-            const originalCount = currentData.home.featuredMovies.length;
+            let originalCount = 0;
+            let totalRemoved = 0;
             
-            // Remove duplicates based on title and year
-            const seen = new Set();
-            currentData.home.featuredMovies = currentData.home.featuredMovies.filter(item => {
-                const key = `${item.title}-${item.year}-${item.type}`;
-                if (seen.has(key)) {
-                    return false;
-                }
-                seen.add(key);
-                return true;
+            // Remove duplicates based on title and year from each category
+            currentData.Categories.forEach(category => {
+                const originalLength = category.Entries.length;
+                originalCount += originalLength;
+                
+                const seen = new Set();
+                category.Entries = category.Entries.filter(entry => {
+                    const key = `${entry.Title}-${entry.Year}-${category.MainCategory}`;
+                    if (seen.has(key)) {
+                        return false;
+                    }
+                    seen.add(key);
+                    return true;
+                });
+                
+                totalRemoved += originalLength - category.Entries.length;
             });
-            
-            // Update slides to match
-            currentData.home.slides = currentData.home.slides.filter(slide => 
-                currentData.home.featuredMovies.some(movie => movie.id === slide.id)
-            );
-            
-            const removed = originalCount - currentData.home.featuredMovies.length;
             
             saveData();
             updateDataStats();
             updatePreview();
-            showStatus('success', `Removed ${removed} duplicate items!`);
+            showStatus('success', `Removed ${totalRemoved} duplicate items!`);
         }
 
         // Preview and management functions
@@ -2133,33 +2196,66 @@
             
             let items = [];
             
-            if (filter === 'all' || filter === 'movie' || filter === 'series') {
-                items = items.concat(currentData.home.featuredMovies.filter(item => 
-                    filter === 'all' || item.type === filter
-                ));
-            }
-            
-            if (filter === 'all' || filter === 'live') {
-                items = items.concat((currentData.home.channels || []).map(channel => ({
-                    ...channel,
-                    type: 'live'
-                })));
-            }
+            // Collect items from Categories structure
+            currentData.Categories.forEach(category => {
+                const categoryType = category.MainCategory.toLowerCase();
+                
+                if (filter === 'all' || 
+                    (filter === 'movie' && categoryType === 'movies') ||
+                    (filter === 'series' && categoryType === 'tv series') ||
+                    (filter === 'live' && categoryType === 'live tv')) {
+                    
+                    category.Entries.forEach(entry => {
+                        items.push({
+                            ...entry,
+                            categoryType: categoryType,
+                            mainCategory: category.MainCategory
+                        });
+                    });
+                }
+            });
             
             items.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'preview-item';
                 
+                // Determine type display
+                let typeDisplay = item.mainCategory;
+                if (item.SubCategory) {
+                    typeDisplay += ` (${item.SubCategory})`;
+                }
+                
+                // Count auto-generated vs manual servers
+                let autoServers = 0;
+                let manualServers = 0;
+                if (item.Servers) {
+                    item.Servers.forEach(server => {
+                        if (server.url && (server.url.includes('vidsrc.net') || server.url.includes('vidjoy.pro'))) {
+                            autoServers++;
+                        } else {
+                            manualServers++;
+                        }
+                    });
+                }
+
                 div.innerHTML = `
-                    <img src="${item.image || 'https://via.placeholder.com/300x450?text=No+Image'}" 
-                         alt="${item.title}" loading="lazy">
+                    <img src="${item.Poster || item.Thumbnail || 'https://via.placeholder.com/300x450?text=No+Image'}" 
+                         alt="${item.Title}" loading="lazy">
                     <div class="info">
-                        <div class="title">${item.title}</div>
-                        <div class="meta">${item.year || 'Unknown'} • ${item.type?.toUpperCase()} • Rating: ${item.rating || 'N/A'}</div>
-                        <div class="meta">Sources: ${item.sources?.length || 0}</div>
+                        <div class="title">${item.Title || 'Untitled'}</div>
+                        <div class="meta">${item.Year || 'Unknown'} • ${typeDisplay} • Rating: ${item.Rating || 'N/A'}</div>
+                        <div class="meta">
+                            Servers: ${item.Servers?.length || 0} 
+                            ${autoServers > 0 ? `(${autoServers} auto)` : ''}
+                            ${manualServers > 0 ? `(${manualServers} manual)` : ''}
+                        </div>
+                        ${item.Seasons ? `<div class="meta">Seasons: ${item.Seasons.length}</div>` : ''}
+                        ${item.Trailer ? `<div class="meta">🎬 Has Trailer</div>` : ''}
+                        ${item.TMDB_ID ? `<div class="meta">📺 TMDB: ${item.TMDB_ID}</div>` : ''}
                         <div style="margin-top: 10px;">
-                            <button class="btn btn-secondary btn-small" onclick="editContent(${item.id})">Edit</button>
-                            <button class="btn btn-danger btn-small" onclick="deleteContent(${item.id}, '${item.type}')">Delete</button>
+                            <button class="btn btn-secondary btn-small" onclick="editContent('${item.id}', '${item.mainCategory}')">Edit</button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('${item.id}', '${item.mainCategory}')">Delete</button>
+                            ${item.Trailer ? `<button class="btn btn-info btn-small" onclick="window.open('${item.Trailer}', '_blank')">🎬 Trailer</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -2168,12 +2264,23 @@
             });
         }
 
-        function editContent(id) {
-            // Find the content
-            let content = currentData.home.featuredMovies.find(item => item.id === id);
-            if (!content) {
-                content = (currentData.home.channels || []).find(item => item.id === id);
-            }
+        function editContent(id, mainCategory) {
+            // Find the content in Categories structure
+            let content = null;
+            let categoryIndex = -1;
+            let entryIndex = -1;
+            
+            currentData.Categories.forEach((category, cIndex) => {
+                if (category.MainCategory === mainCategory) {
+                    categoryIndex = cIndex;
+                    category.Entries.forEach((entry, eIndex) => {
+                        if (entry.id == id) {
+                            content = entry;
+                            entryIndex = eIndex;
+                        }
+                    });
+                }
+            });
             
             if (!content) {
                 showStatus('error', 'Content not found');
@@ -2187,21 +2294,37 @@
             form.innerHTML = `
                 <div class="form-group">
                     <label>Title</label>
-                    <input type="text" id="edit-title" value="${content.title}">
+                    <input type="text" id="edit-title" value="${content.Title || ''}">
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea id="edit-description" rows="4">${content.description || ''}</textarea>
+                    <textarea id="edit-description" rows="4">${content.Description || ''}</textarea>
                 </div>
                 <div class="form-group">
                     <label>Year</label>
-                    <input type="text" id="edit-year" value="${content.year || ''}">
+                    <input type="text" id="edit-year" value="${content.Year || ''}">
                 </div>
                 <div class="form-group">
                     <label>Rating</label>
-                    <input type="number" id="edit-rating" min="0" max="10" step="0.1" value="${content.rating || ''}">
+                    <input type="number" id="edit-rating" min="0" max="10" step="0.1" value="${content.Rating || ''}">
+                </div>
+                <div class="form-group">
+                    <label>Poster URL</label>
+                    <input type="url" id="edit-poster" value="${content.Poster || ''}">
+                </div>
+                <div class="form-group">
+                    <label>TMDB ID</label>
+                    <input type="number" id="edit-tmdb-id" value="${content.TMDB_ID || ''}">
+                    <small>Changing this will regenerate VidSrc/VidJoy servers</small>
+                </div>
+                <div class="form-group">
+                    <label>YouTube Trailer URL</label>
+                    <input type="url" id="edit-trailer" value="${content.Trailer || ''}">
                 </div>
                 <input type="hidden" id="edit-id" value="${id}">
+                <input type="hidden" id="edit-category" value="${mainCategory}">
+                <input type="hidden" id="edit-category-index" value="${categoryIndex}">
+                <input type="hidden" id="edit-entry-index" value="${entryIndex}">
             `;
             
             modal.style.display = 'block';
@@ -2212,75 +2335,121 @@
         }
 
         function saveEdit() {
-            const id = parseInt(document.getElementById('edit-id').value);
+            const id = document.getElementById('edit-id').value;
             const title = document.getElementById('edit-title').value;
             const description = document.getElementById('edit-description').value;
             const year = document.getElementById('edit-year').value;
             const rating = parseFloat(document.getElementById('edit-rating').value);
+            const poster = document.getElementById('edit-poster').value;
+            const tmdbId = document.getElementById('edit-tmdb-id').value;
+            const trailer = document.getElementById('edit-trailer').value;
+            const categoryIndex = parseInt(document.getElementById('edit-category-index').value);
+            const entryIndex = parseInt(document.getElementById('edit-entry-index').value);
+            const category = document.getElementById('edit-category').value;
             
-            // Find and update content
-            let content = currentData.home.featuredMovies.find(item => item.id === id);
-            let isChannel = false;
-            
-            if (!content) {
-                content = (currentData.home.channels || []).find(item => item.id === id);
-                isChannel = true;
-            }
-            
-            if (content) {
-                content.title = title;
-                content.description = description;
-                content.year = year;
-                content.rating = rating;
+            // Update the content in Categories structure
+            if (categoryIndex >= 0 && entryIndex >= 0 && 
+                currentData.Categories[categoryIndex] && 
+                currentData.Categories[categoryIndex].Entries[entryIndex]) {
                 
-                // Update corresponding slide
-                const slide = currentData.home.slides.find(s => s.id === id);
-                if (slide) {
-                    slide.title = title;
+                const content = currentData.Categories[categoryIndex].Entries[entryIndex];
+                const oldTmdbId = content.TMDB_ID;
+                
+                content.Title = title;
+                content.Description = description;
+                content.Year = year;
+                content.Rating = rating;
+                content.Poster = poster;
+                if (!content.Thumbnail) {
+                    content.Thumbnail = poster; // Use poster as thumbnail if not set
+                }
+                
+                // Handle TMDB ID changes
+                if (tmdbId && tmdbId !== oldTmdbId) {
+                    content.TMDB_ID = parseInt(tmdbId);
+                    
+                    // Regenerate auto servers, keeping manual ones
+                    const manualServers = content.Servers ? content.Servers.filter(server => 
+                        !server.url.includes('vidsrc.net') && !server.url.includes('vidjoy.pro')
+                    ) : [];
+                    
+                    // Determine content type from category
+                    let contentType = 'movie';
+                    if (category === 'TV Series') contentType = 'series';
+                    else if (category === 'Live TV') contentType = 'live';
+                    
+                    const autoServers = generateAutoServers(tmdbId, contentType);
+                    content.Servers = [...autoServers, ...manualServers];
+                } else if (!tmdbId && oldTmdbId) {
+                    // TMDB ID removed, keep only manual servers
+                    delete content.TMDB_ID;
+                    content.Servers = content.Servers ? content.Servers.filter(server => 
+                        !server.url.includes('vidsrc.net') && !server.url.includes('vidjoy.pro')
+                    ) : [];
+                }
+                
+                // Handle trailer
+                if (trailer) {
+                    content.Trailer = processYouTubeUrl(trailer);
+                } else {
+                    delete content.Trailer;
                 }
                 
                 saveData();
                 updatePreview();
                 closeEditModal();
-                showStatus('success', 'Content updated successfully!');
+                
+                let message = 'Content updated successfully!';
+                if (tmdbId && tmdbId !== oldTmdbId) {
+                    message += ' Auto-servers regenerated.';
+                }
+                showStatus('success', message);
+            } else {
+                showStatus('error', 'Failed to update content');
             }
         }
 
-        function deleteContent(id, type) {
+        function deleteContent(id, mainCategory) {
             if (confirm('Are you sure you want to delete this content?')) {
-                // Remove from featuredMovies or channels
-                if (type === 'live') {
-                    currentData.home.channels = (currentData.home.channels || []).filter(item => item.id !== id);
-                    currentData.api_info.total_channels--;
-                } else {
-                    currentData.home.featuredMovies = currentData.home.featuredMovies.filter(item => item.id !== id);
-                    if (type === 'movie') {
-                        currentData.api_info.total_movies--;
-                    } else {
-                        currentData.api_info.total_series--;
+                // Find and remove from Categories structure
+                let found = false;
+                currentData.Categories.forEach(category => {
+                    if (category.MainCategory === mainCategory) {
+                        const originalLength = category.Entries.length;
+                        category.Entries = category.Entries.filter(entry => entry.id != id);
+                        if (category.Entries.length < originalLength) {
+                            found = true;
+                        }
                     }
+                });
+                
+                if (found) {
+                    saveData();
+                    updateDataStats();
+                    updatePreview();
+                    showStatus('success', 'Content deleted successfully!');
+                } else {
+                    showStatus('error', 'Content not found');
                 }
-                
-                // Remove from slides
-                currentData.home.slides = currentData.home.slides.filter(slide => slide.id !== id);
-                
-                saveData();
-                updateDataStats();
-                updatePreview();
-                showStatus('success', 'Content deleted successfully!');
             }
         }
 
         // Utility functions
         function updateDataStats() {
-            const movieCount = currentData.home.featuredMovies.filter(item => item.type === 'movie').length;
-            const seriesCount = currentData.home.featuredMovies.filter(item => item.type === 'series').length;
-            const channelCount = (currentData.home.channels || []).length;
+            let movieCount = 0;
+            let seriesCount = 0;
+            let channelCount = 0;
             
-            currentData.api_info.total_movies = movieCount;
-            currentData.api_info.total_series = seriesCount;
-            currentData.api_info.total_channels = channelCount;
-            currentData.api_info.last_updated = new Date().toISOString().split('T')[0];
+            // Count items from Categories structure
+            currentData.Categories.forEach(category => {
+                if (category.MainCategory === 'Movies') {
+                    movieCount += category.Entries.length;
+                } else if (category.MainCategory === 'TV Series') {
+                    seriesCount += category.Entries.length;
+                } else if (category.MainCategory === 'Live TV') {
+                    channelCount += category.Entries.length;
+                }
+            });
             
             // Update display
             if (document.getElementById('movie-count')) {
@@ -2323,56 +2492,50 @@
         }
 
                  function saveData() {
-             // Update root-level arrays for CineMax compatibility
-             const dataToSave = {
-                 ...currentData,
-                 movies: currentData.home.featuredMovies || [],
-                 actors: generateActorsFromContent(),
-                 genres: generateGenresFromContent()
-             };
-             
-             localStorage.setItem('cinemax-data', JSON.stringify(dataToSave));
+             // Save data in Categories format
+             localStorage.setItem('playlist-data', JSON.stringify(currentData));
          }
 
         function loadSavedData() {
-            const saved = localStorage.getItem('cinemax-data');
+            const saved = localStorage.getItem('playlist-data');
             if (saved) {
                 try {
-                    currentData = JSON.parse(saved);
+                    const loadedData = JSON.parse(saved);
                     
-                    // Find the highest ID to continue from
-                    let maxId = 0;
-                    const allItems = [
-                        ...(currentData.home.slides || []),
-                        ...(currentData.home.featuredMovies || []),
-                        ...(currentData.home.channels || [])
-                    ];
-                    
-                    allItems.forEach(item => {
-                        if (item.id > maxId) maxId = item.id;
-                        if (item.sources) {
-                            item.sources.forEach(source => {
-                                if (source.id > maxId) maxId = source.id;
-                            });
-                        }
-                        if (item.seasons) {
-                            item.seasons.forEach(season => {
-                                if (season.id > maxId) maxId = season.id;
-                                if (season.episodes) {
-                                    season.episodes.forEach(episode => {
-                                        if (episode.id > maxId) maxId = episode.id;
-                                        if (episode.sources) {
-                                            episode.sources.forEach(source => {
-                                                if (source.id > maxId) maxId = source.id;
+                    // Validate structure
+                    if (loadedData.Categories && Array.isArray(loadedData.Categories)) {
+                        currentData = loadedData;
+                        
+                        // Find the highest ID to continue from
+                        let maxId = 0;
+                        currentData.Categories.forEach(category => {
+                            category.Entries.forEach(entry => {
+                                if (entry.id && entry.id > maxId) maxId = entry.id;
+                                if (entry.Servers) {
+                                    entry.Servers.forEach(server => {
+                                        if (server.id && server.id > maxId) maxId = server.id;
+                                    });
+                                }
+                                if (entry.Seasons) {
+                                    entry.Seasons.forEach(season => {
+                                        if (season.id && season.id > maxId) maxId = season.id;
+                                        if (season.Episodes) {
+                                            season.Episodes.forEach(episode => {
+                                                if (episode.id && episode.id > maxId) maxId = episode.id;
+                                                if (episode.Servers) {
+                                                    episode.Servers.forEach(server => {
+                                                        if (server.id && server.id > maxId) maxId = server.id;
+                                                    });
+                                                }
                                             });
                                         }
                                     });
                                 }
                             });
-                        }
-                    });
-                    
-                    nextId = maxId + 1;
+                        });
+                        
+                        nextId = maxId + 1;
+                    }
                 } catch (error) {
                     console.error('Error loading saved data:', error);
                 }
