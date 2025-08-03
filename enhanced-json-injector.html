@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced JSON Playlist Editor - TMDB Integration</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --warning: #f8961e;
+            --dark: #1a1a2e;
+            --light: #f8f9fa;
+            --card-bg: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.1);
+            --live: #ff5252;
+            --movies: #4caf50;
+            --series: #ff9800;
+            --tmdb: #01d277;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            color: var(--success);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            color: #a1d6ff;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--success);
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            color: #a1d6ff;
+            opacity: 0.8;
+        }
+        
+        .main-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .main-tab {
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            border: 1px solid var(--border);
+        }
+        
+        .main-tab.active {
+            background: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+        }
+        
+        .tmdb-tab {
+            border-color: var(--tmdb);
+            color: #a1d6ff;
+        }
+        
+        .tmdb-tab.active {
+            background: var(--tmdb);
+            color: white;
+        }
+        
+        .manual-tab {
+            border-color: var(--warning);
+            color: #ffe0b2;
+        }
+        
+        .manual-tab.active {
+            background: var(--warning);
+            color: white;
+        }
+        
+        .content-section {
+            display: none;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        .search-section {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+        
+        .search-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .search-input {
+            flex: 1;
+            min-width: 300px;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--success);
+            box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.3);
+        }
+        
+        .search-btn {
+            padding: 15px 30px;
+            background: var(--tmdb);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .search-btn:hover {
+            background: #00b894;
+            transform: translateY(-2px);
+        }
+        
+        .search-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .search-result {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+            border: 1px solid var(--border);
+            cursor: pointer;
+        }
+        
+        .search-result:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+        
+        .search-result.selected {
+            border-color: var(--success);
+            box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.3);
+        }
+        
+        .result-poster {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            background: #333;
+        }
+        
+        .result-info {
+            padding: 15px;
+        }
+        
+        .result-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--success);
+        }
+        
+        .result-meta {
+            font-size: 0.9rem;
+            color: #a1d6ff;
+            opacity: 0.8;
+        }
+        
+        .bulk-section {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+        
+        .bulk-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .bulk-input {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .bulk-btn {
+            padding: 12px 20px;
+            background: var(--warning);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .bulk-btn:hover {
+            background: #e07a0c;
+            transform: translateY(-2px);
+        }
+        
+        .form-section {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid var(--border);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 1.1rem;
+            color: #a1d6ff;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--success);
+            box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.3);
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 28px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+        
+        .btn:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            box-shadow: 0 4px 15px rgba(76, 201, 240, 0.3);
+        }
+        
+        .btn-success:hover {
+            background: #3bb5d8;
+            box-shadow: 0 6px 20px rgba(76, 201, 240, 0.4);
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            box-shadow: 0 4px 15px rgba(247, 37, 133, 0.3);
+        }
+        
+        .btn-danger:hover {
+            background: #e91e63;
+            box-shadow: 0 6px 20px rgba(247, 37, 133, 0.4);
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            box-shadow: 0 4px 15px rgba(248, 150, 30, 0.3);
+        }
+        
+        .btn-warning:hover {
+            background: #e07a0c;
+            box-shadow: 0 6px 20px rgba(248, 150, 30, 0.4);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .preview-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .preview-poster {
+            width: 200px;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 10px;
+            background: #333;
+        }
+        
+        .preview-info {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateX(400px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: var(--success);
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(76, 201, 240, 0.3);
+            border-top: 3px solid var(--success);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .server-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .server-item input {
+            flex: 1;
+        }
+        
+        .remove-btn {
+            background: rgba(247, 37, 133, 0.2);
+            color: var(--danger);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .remove-btn:hover {
+            background: rgba(247, 37, 133, 0.3);
+        }
+        
+        .add-btn {
+            background: rgba(76, 201, 240, 0.2);
+            color: var(--success);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .add-btn:hover {
+            background: rgba(76, 201, 240, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .main-tabs {
+                flex-direction: column;
+            }
+            
+            .search-container {
+                flex-direction: column;
+            }
+            
+            .search-input {
+                min-width: auto;
+            }
+            
+            .bulk-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .preview-container {
+                flex-direction: column;
+            }
+            
+            .preview-poster {
+                width: 100%;
+                max-width: 300px;
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-film"></i> Enhanced JSON Playlist Editor</h1>
+            <p class="subtitle">TMDB Integration • Auto-Detection • Bulk Generation • Modern UI</p>
+        </header>
+
+        <!-- Statistics Dashboard -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="total-entries">0</div>
+                <div class="stat-label">Total Entries</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="live-count">0</div>
+                <div class="stat-label">Live TV</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="movies-count">0</div>
+                <div class="stat-label">Movies</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="series-count">0</div>
+                <div class="stat-label">TV Series</div>
+            </div>
+        </div>
+
+        <!-- Main Navigation Tabs -->
+        <div class="main-tabs">
+            <div class="main-tab tmdb-tab active" data-tab="tmdb">
+                <i class="fas fa-search"></i> TMDB Auto Search
+            </div>
+            <div class="main-tab manual-tab" data-tab="manual">
+                <i class="fas fa-edit"></i> Manual Entry
+            </div>
+        </div>
+
+        <!-- TMDB Auto Search Section -->
+        <div class="content-section active" id="tmdb-section">
+            <div class="search-section">
+                <h3><i class="fas fa-search"></i> TMDB Search</h3>
+                <div class="search-container">
+                    <input type="text" class="search-input" id="tmdb-search" placeholder="Search for movies, TV series, or live content...">
+                    <button class="search-btn" id="search-btn">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+                
+                <div class="loading" id="search-loading">
+                    <div class="spinner"></div>
+                    <p>Searching TMDB...</p>
+                </div>
+                
+                <div class="search-results" id="search-results"></div>
+            </div>
+
+            <!-- Bulk Generation Section -->
+            <div class="bulk-section">
+                <h3><i class="fas fa-layer-group"></i> Bulk Generation</h3>
+                <div class="bulk-controls">
+                    <select class="bulk-input" id="bulk-type">
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Series</option>
+                    </select>
+                    <input type="number" class="bulk-input" id="bulk-year" placeholder="Year (e.g., 2024)" min="1900" max="2030">
+                    <select class="bulk-input" id="bulk-genre">
+                        <option value="">All Genres</option>
+                        <option value="28">Action</option>
+                        <option value="12">Adventure</option>
+                        <option value="16">Animation</option>
+                        <option value="35">Comedy</option>
+                        <option value="80">Crime</option>
+                        <option value="99">Documentary</option>
+                        <option value="18">Drama</option>
+                        <option value="10751">Family</option>
+                        <option value="14">Fantasy</option>
+                        <option value="36">History</option>
+                        <option value="27">Horror</option>
+                        <option value="10402">Music</option>
+                        <option value="9648">Mystery</option>
+                        <option value="10749">Romance</option>
+                        <option value="878">Science Fiction</option>
+                        <option value="10770">TV Movie</option>
+                        <option value="53">Thriller</option>
+                        <option value="10752">War</option>
+                        <option value="37">Western</option>
+                    </select>
+                    <input type="number" class="bulk-input" id="bulk-count" placeholder="Count (max 20)" min="1" max="20" value="10">
+                    <button class="bulk-btn" id="bulk-generate-btn">
+                        <i class="fas fa-magic"></i> Generate
+                    </button>
+                </div>
+            </div>
+
+            <!-- Selected Item Preview -->
+            <div class="form-section" id="preview-section" style="display: none;">
+                <h3><i class="fas fa-eye"></i> Preview & Auto-Generation</h3>
+                <div class="preview-container">
+                    <img class="preview-poster" id="preview-poster" src="" alt="Poster">
+                    <div class="preview-info">
+                        <h4 id="preview-title"></h4>
+                        <p id="preview-overview"></p>
+                        <div class="btn-group">
+                            <button class="btn btn-success" id="auto-generate-btn">
+                                <i class="fas fa-magic"></i> Auto Generate Sources
+                            </button>
+                            <button class="btn btn-warning" id="manual-add-btn">
+                                <i class="fas fa-plus"></i> Add to Playlist
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Entry Section -->
+        <div class="content-section" id="manual-section">
+            <div class="form-section">
+                <h3><i class="fas fa-edit"></i> Manual Entry</h3>
+                <div class="form-group">
+                    <label for="manual-title">Title</label>
+                    <input type="text" id="manual-title" placeholder="Enter title">
+                </div>
+                <div class="form-group">
+                    <label for="manual-type">Type</label>
+                    <select id="manual-type">
+                        <option value="live">Live TV</option>
+                        <option value="movie">Movie</option>
+                        <option value="series">TV Series</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="manual-poster">Poster URL</label>
+                    <input type="text" id="manual-poster" placeholder="Poster image URL">
+                </div>
+                <div class="form-group">
+                    <label for="manual-description">Description</label>
+                    <textarea id="manual-description" rows="3" placeholder="Description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="manual-servers">Servers (one per line, format: name|url)</label>
+                    <textarea id="manual-servers" rows="5" placeholder="Server1|https://example.com/stream1&#10;Server2|https://example.com/stream2"></textarea>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-success" id="add-manual-btn">
+                        <i class="fas fa-plus"></i> Add Entry
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification -->
+        <div class="notification" id="notification"></div>
+    </div>
+
+    <script>
+        // TMDB API Configuration
+        const TMDB_API_KEY = 'ec926176bf467b3f7735e3154238c161';
+        const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+        const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
+        const TMDB_IMAGE_ORIGINAL = 'https://image.tmdb.org/t/p/original';
+
+        // Global variables
+        let currentPlaylist = {
+            Categories: [
+                { MainCategory: "Live TV", SubCategories: [], Entries: [] },
+                { MainCategory: "Movies", SubCategories: [], Entries: [] },
+                { MainCategory: "TV Series", SubCategories: [], Entries: [] }
+            ]
+        };
+        let selectedItem = null;
+
+        // DOM elements
+        const searchInput = document.getElementById('tmdb-search');
+        const searchBtn = document.getElementById('search-btn');
+        const searchResults = document.getElementById('search-results');
+        const searchLoading = document.getElementById('search-loading');
+        const previewSection = document.getElementById('preview-section');
+        const previewPoster = document.getElementById('preview-poster');
+        const previewTitle = document.getElementById('preview-title');
+        const previewOverview = document.getElementById('preview-overview');
+        const autoGenerateBtn = document.getElementById('auto-generate-btn');
+        const manualAddBtn = document.getElementById('manual-add-btn');
+        const bulkGenerateBtn = document.getElementById('bulk-generate-btn');
+        const addManualBtn = document.getElementById('add-manual-btn');
+
+        // Tab switching
+        document.querySelectorAll('.main-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById(`${tabId}-section`).classList.add('active');
+            });
+        });
+
+        // Search functionality
+        searchBtn.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+
+        async function performSearch() {
+            const query = searchInput.value.trim();
+            if (!query) {
+                showNotification('Please enter a search term');
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const results = await searchTMDB(query);
+                displaySearchResults(results);
+            } catch (error) {
+                showNotification('Search failed: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function searchTMDB(query) {
+            const movieResponse = await fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1`);
+            const tvResponse = await fetch(`${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1`);
+            
+            const movieData = await movieResponse.json();
+            const tvData = await tvResponse.json();
+            
+            const results = [];
+            
+            // Add movies
+            movieData.results.slice(0, 5).forEach(movie => {
+                results.push({
+                    ...movie,
+                    media_type: 'movie',
+                    display_title: movie.title,
+                    display_date: movie.release_date
+                });
+            });
+            
+            // Add TV series
+            tvData.results.slice(0, 5).forEach(tv => {
+                results.push({
+                    ...tv,
+                    media_type: 'tv',
+                    display_title: tv.name,
+                    display_date: tv.first_air_date
+                });
+            });
+            
+            return results;
+        }
+
+        function displaySearchResults(results) {
+            searchResults.innerHTML = '';
+            
+            if (results.length === 0) {
+                searchResults.innerHTML = '<p style="text-align: center; color: #a1d6ff;">No results found</p>';
+                return;
+            }
+            
+            results.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = `
+                    <img class="result-poster" src="${result.poster_path ? TMDB_IMAGE_BASE + result.poster_path : 'https://via.placeholder.com/300x450/333/666?text=No+Poster'}" alt="${result.display_title}">
+                    <div class="result-info">
+                        <div class="result-title">${result.display_title}</div>
+                        <div class="result-meta">
+                            ${result.media_type === 'movie' ? 'Movie' : 'TV Series'} • ${result.display_date ? result.display_date.split('-')[0] : 'N/A'}
+                        </div>
+                    </div>
+                `;
+                
+                resultDiv.addEventListener('click', () => selectItem(result));
+                searchResults.appendChild(resultDiv);
+            });
+        }
+
+        function selectItem(item) {
+            selectedItem = item;
+            
+            // Update preview
+            previewPoster.src = item.poster_path ? TMDB_IMAGE_BASE + item.poster_path : 'https://via.placeholder.com/300x450/333/666?text=No+Poster';
+            previewTitle.textContent = item.display_title;
+            previewOverview.textContent = item.overview || 'No overview available';
+            
+            // Show preview section
+            previewSection.style.display = 'block';
+            previewSection.scrollIntoView({ behavior: 'smooth' });
+            
+            // Update selected state
+            document.querySelectorAll('.search-result').forEach(result => {
+                result.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+        }
+
+        // Auto generation functionality
+        autoGenerateBtn.addEventListener('click', async () => {
+            if (!selectedItem) {
+                showNotification('Please select an item first');
+                return;
+            }
+            
+            showLoading(true);
+            try {
+                const sources = await autoGenerateSources(selectedItem);
+                showNotification(`Generated ${sources.length} sources for ${selectedItem.display_title}`);
+                // Here you would typically add the item to your playlist with the generated sources
+            } catch (error) {
+                showNotification('Auto-generation failed: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        async function autoGenerateSources(item) {
+            const sources = [];
+            
+            // Generate YouTube trailer
+            const trailerQuery = `${item.display_title} ${item.media_type === 'movie' ? 'movie' : 'tv series'} trailer`;
+            const trailerUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(trailerQuery)}`;
+            sources.push({
+                name: 'YouTube Trailer',
+                url: trailerUrl,
+                type: 'trailer'
+            });
+            
+            // Generate vidsrc.net embed
+            const vidsrcUrl = `https://vidsrc.to/embed/${item.media_type}/${item.id}`;
+            sources.push({
+                name: 'VidSrc',
+                url: vidsrcUrl,
+                type: 'stream'
+            });
+            
+            // Generate vidjoy.pro embed
+            const vidjoyUrl = `https://vidjoy.pro/e/${item.id}`;
+            sources.push({
+                name: 'VidJoy',
+                url: vidjoyUrl,
+                type: 'stream'
+            });
+            
+            return sources;
+        }
+
+        // Bulk generation
+        bulkGenerateBtn.addEventListener('click', async () => {
+            const type = document.getElementById('bulk-type').value;
+            const year = document.getElementById('bulk-year').value;
+            const genre = document.getElementById('bulk-genre').value;
+            const count = document.getElementById('bulk-count').value;
+            
+            if (!year || !count) {
+                showNotification('Please fill in year and count');
+                return;
+            }
+            
+            showLoading(true);
+            try {
+                const results = await bulkGenerate(type, year, genre, count);
+                showNotification(`Generated ${results.length} items`);
+            } catch (error) {
+                showNotification('Bulk generation failed: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        async function bulkGenerate(type, year, genre, count) {
+            let url = `${TMDB_BASE_URL}/discover/${type}?api_key=${TMDB_API_KEY}&language=en-US&sort_by=popularity.desc&include_adult=false&include_video=false&page=1&primary_release_year=${year}&with_genres=${genre}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            return data.results.slice(0, count);
+        }
+
+        // Manual entry
+        addManualBtn.addEventListener('click', () => {
+            const title = document.getElementById('manual-title').value.trim();
+            const type = document.getElementById('manual-type').value;
+            const poster = document.getElementById('manual-poster').value.trim();
+            const description = document.getElementById('manual-description').value.trim();
+            const serversText = document.getElementById('manual-servers').value.trim();
+            
+            if (!title || !serversText) {
+                showNotification('Please fill in title and servers');
+                return;
+            }
+            
+            const servers = serversText.split('\n').filter(line => line.trim()).map(line => {
+                const [name, url] = line.split('|');
+                return { name: name.trim(), url: url.trim() };
+            });
+            
+            const entry = {
+                Title: title,
+                SubCategory: 'Manual',
+                Country: '',
+                Description: description,
+                Poster: poster,
+                Thumbnail: poster,
+                Rating: 0,
+                Servers: servers
+            };
+            
+            addToPlaylist(type, entry);
+            showNotification(`Added ${title} to playlist`);
+            
+            // Clear form
+            document.getElementById('manual-title').value = '';
+            document.getElementById('manual-poster').value = '';
+            document.getElementById('manual-description').value = '';
+            document.getElementById('manual-servers').value = '';
+        });
+
+        function addToPlaylist(type, entry) {
+            let categoryIndex;
+            switch (type) {
+                case 'live':
+                    categoryIndex = 0;
+                    break;
+                case 'movie':
+                    categoryIndex = 1;
+                    break;
+                case 'series':
+                    categoryIndex = 2;
+                    break;
+                default:
+                    categoryIndex = 1;
+            }
+            
+            currentPlaylist.Categories[categoryIndex].Entries.push(entry);
+            updateStatistics();
+        }
+
+        // Utility functions
+        function showLoading(show) {
+            searchLoading.classList.toggle('show', show);
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function updateStatistics() {
+            const total = currentPlaylist.Categories.reduce((sum, cat) => sum + cat.Entries.length, 0);
+            document.getElementById('total-entries').textContent = total;
+            document.getElementById('live-count').textContent = currentPlaylist.Categories[0].Entries.length;
+            document.getElementById('movies-count').textContent = currentPlaylist.Categories[1].Entries.length;
+            document.getElementById('series-count').textContent = currentPlaylist.Categories[2].Entries.length;
+        }
+
+        // Initialize
+        updateStatistics();
+    </script>
+</body>
+</html>
