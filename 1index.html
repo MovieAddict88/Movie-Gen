@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineMax Enhanced API Manager</title>
+    <title>Playlist Categories Manager</title>
     <style>
         :root {
             --primary: #e50914;
@@ -412,8 +412,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎬 CineMax Enhanced API Manager</h1>
-            <p class="subtitle">Complete TMDB Integration with Automatic Video Sources & Advanced Management</p>
+            <h1>📁 Playlist Categories Manager</h1>
+            <p class="subtitle">Manage content in Categories structure with Movies, TV Series, and Live TV</p>
         </header>
 
         <div class="tabs">
@@ -515,8 +515,27 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label>SubCategory</label>
+                        <select id="manual-subcategory">
+                            <option value="Action">Action</option>
+                            <option value="Comedy">Comedy</option>
+                            <option value="Drama">Drama</option>
+                            <option value="Horror">Horror</option>
+                            <option value="Sci-Fi">Sci-Fi</option>
+                            <option value="Anime">Anime</option>
+                            <option value="Entertainment">Entertainment</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid">
+                    <div class="form-group">
                         <label>Title</label>
                         <input type="text" id="manual-title" placeholder="Content title">
+                    </div>
+                    <div class="form-group">
+                        <label>Country</label>
+                        <input type="text" id="manual-country" placeholder="Country (optional)">
                     </div>
                 </div>
                 
@@ -719,19 +738,23 @@
 
         // Global data storage
         let currentData = {
-            api_info: {
-                version: "2.0",
-                description: "Enhanced CineMax API with TMDB Integration",
-                last_updated: new Date().toISOString().split('T')[0],
-                total_movies: 0,
-                total_series: 0,
-                total_channels: 0
-            },
-            home: {
-                slides: [],
-                featuredMovies: [],
-                channels: []
-            }
+            Categories: [
+                {
+                    MainCategory: "Live TV",
+                    SubCategories: ["Entertainment"],
+                    Entries: []
+                },
+                {
+                    MainCategory: "Movies", 
+                    SubCategories: ["Action", "Comedy", "Drama", "Horror", "Sci-Fi"],
+                    Entries: []
+                },
+                {
+                    MainCategory: "TV Series",
+                    SubCategories: ["Anime", "Action", "Comedy", "Drama"],
+                    Entries: []
+                }
+            ]
         };
 
         let nextId = 1;
@@ -1147,22 +1170,33 @@
 
              console.log('Generated movie with sources:', movie.sources);
 
-            // Add to slides and featured movies
-            currentData.home.slides.push({
-                id: movie.id,
-                title: movie.title,
-                type: "movie",
-                image: movie.cover || movie.image,
-                url: `movies/${movie.id}`,
-                poster: movie
-            });
+            // Convert to Categories structure
+            const movieEntry = {
+                Title: movie.title,
+                SubCategory: movie.genres?.[0]?.title || "Action",
+                Country: "",
+                Description: movie.description,
+                Poster: movie.image,
+                Thumbnail: movie.image,
+                Rating: Math.round(movie.rating),
+                Duration: movie.duration,
+                Year: parseInt(movie.year),
+                Servers: movie.sources.map(source => ({
+                    name: source.title,
+                    url: source.url
+                }))
+            };
 
-            currentData.home.featuredMovies.push(movie);
-            
-            // Ensure movie has actors and genres arrays (even if empty)
-            if (!movie.actors) movie.actors = [];
-            if (!movie.genres) movie.genres = [];
-            currentData.api_info.total_movies++;
+            // Add to Movies category
+            const moviesCategory = currentData.Categories.find(cat => cat.MainCategory === "Movies");
+            if (moviesCategory) {
+                // Add genre to subcategories if not exists
+                const genre = movie.genres?.[0]?.title || "Action";
+                if (!moviesCategory.SubCategories.includes(genre)) {
+                    moviesCategory.SubCategories.push(genre);
+                }
+                moviesCategory.Entries.push(movieEntry);
+            }
             
             saveData();
         }
@@ -1340,22 +1374,43 @@
                 created_at: new Date().toISOString().split('T')[0]
             };
 
-            // Add to slides and featured movies
-            currentData.home.slides.push({
-                id: series.id,
-                title: series.title,
-                type: "series",
-                image: series.cover || series.image,
-                url: `series/${series.id}`,
-                poster: series
-            });
+            // Convert to Categories structure
+            const seriesEntry = {
+                Title: series.title,
+                SubCategory: series.genres?.[0]?.title || "Action",
+                Country: "",
+                Description: series.description,
+                Poster: series.image,
+                Thumbnail: series.image,
+                Rating: Math.round(series.rating),
+                Year: parseInt(series.year),
+                Seasons: seasons.map(season => ({
+                    Season: season.id,
+                    SeasonPoster: series.image,
+                    Episodes: season.episodes.map(episode => ({
+                        Episode: episode.episode_number,
+                        Title: episode.title,
+                        Duration: episode.duration || "00:45:00",
+                        Description: episode.description || "",
+                        Thumbnail: episode.image || series.image,
+                        Servers: episode.sources?.map(source => ({
+                            name: source.title,
+                            url: source.url
+                        })) || []
+                    }))
+                }))
+            };
 
-            currentData.home.featuredMovies.push(series);
-            
-            // Ensure series has actors and genres arrays (even if empty)
-            if (!series.actors) series.actors = [];
-            if (!series.genres) series.genres = [];
-            currentData.api_info.total_series++;
+            // Add to TV Series category
+            const seriesCategory = currentData.Categories.find(cat => cat.MainCategory === "TV Series");
+            if (seriesCategory) {
+                // Add genre to subcategories if not exists
+                const genre = series.genres?.[0]?.title || "Action";
+                if (!seriesCategory.SubCategories.includes(genre)) {
+                    seriesCategory.SubCategories.push(genre);
+                }
+                seriesCategory.Entries.push(seriesEntry);
+            }
             
             saveData();
         }
@@ -1588,128 +1643,87 @@
         function addManualContent() {
             const type = document.getElementById('manual-type').value;
             const title = document.getElementById('manual-title').value.trim();
+            const subcategory = document.getElementById('manual-subcategory').value;
+            const country = document.getElementById('manual-country').value.trim();
             
             if (!title) {
                 showStatus('warning', 'Please enter a title');
                 return;
             }
 
-            // Get sources
+            // Get servers
             const sourceInputs = document.querySelectorAll('#manual-sources .server-item');
-            const sources = [];
+            const servers = [];
             
             sourceInputs.forEach(item => {
                 const name = item.querySelector('.source-name').value.trim();
                 const url = item.querySelector('.source-url').value.trim();
-                const sourceType = item.querySelector('.source-type').value;
-                const quality = item.querySelector('.source-quality').value;
                 
                 if (name && url) {
-                    sources.push({
-                        id: nextId++,
-                        type: sourceType,
-                        title: `${name} ${quality}`,
-                        quality: quality,
-                        size: sourceType === 'live' ? 'Live' : 'Unknown',
-                        kind: getSourceKind(url),
-                        premium: "false",
-                        external: false,
+                    servers.push({
+                        name: name,
                         url: url
                     });
                 }
             });
 
-            if (sources.length === 0) {
-                showStatus('warning', 'Please add at least one video source');
+            if (servers.length === 0) {
+                showStatus('warning', 'Please add at least one server');
                 return;
             }
 
-            const content = {
-                id: nextId++,
-                title: title,
-                type: type,
-                label: type === 'live' ? 'Live TV' : (type === 'series' ? 'Series' : 'Movie'),
-                sublabel: document.getElementById('manual-year').value || 'Unknown Year',
-                imdb: document.getElementById('manual-rating').value || "0",
-                downloadas: title.toLowerCase().replace(/\s+/g, '-'),
-                comment: true,
-                playas: type === 'live' ? 'live' : 'video',
-                description: document.getElementById('manual-description').value || 'No description available',
-                classification: 'PG-13',
-                year: document.getElementById('manual-year').value || 'Unknown',
-                duration: type === 'live' ? 'Live' : 'Unknown',
-                rating: parseFloat(document.getElementById('manual-rating').value) || 0,
-                image: document.getElementById('manual-image').value || null,
-                cover: document.getElementById('manual-image').value || null,
-                genres: [],
-                sources: sources,
-                trailer: null,
-                actors: [],
-                subtitles: [],
-                views: Math.floor(Math.random() * 1000) + 100,
-                created_at: new Date().toISOString().split('T')[0]
+            // Create entry object matching JSON structure
+            const entry = {
+                Title: title,
+                SubCategory: subcategory,
+                Country: country,
+                Description: document.getElementById('manual-description').value || 'No description available',
+                Poster: document.getElementById('manual-image').value || '',
+                Thumbnail: document.getElementById('manual-image').value || '',
+                Rating: parseInt(document.getElementById('manual-rating').value) || 0,
+                Servers: servers
             };
 
+            // Add additional fields based on type
+            if (type === 'movie' || type === 'series') {
+                entry.Year = parseInt(document.getElementById('manual-year').value) || new Date().getFullYear();
+            }
+            
+            if (type === 'movie') {
+                entry.Duration = "2:00:00"; // Default duration
+            }
+            
             if (type === 'series') {
-                content.seasons = []; // Would need to implement season/episode creation
+                entry.Seasons = []; // Will be populated when seasons are added
             }
 
-            // Add to appropriate collection
-            if (type === 'live') {
-                if (!currentData.home.channels) currentData.home.channels = [];
-                
-                const channel = {
-                    id: content.id,
-                    title: content.title,
-                    label: content.label,
-                    sublabel: content.sublabel,
-                    description: content.description,
-                    website: "",
-                    classification: content.classification,
-                    views: content.views,
-                    shares: Math.floor(content.views * 0.1),
-                    rating: content.rating,
-                    comment: content.comment,
-                    image: content.image,
-                    playas: "live",
-                    sources: content.sources,
-                    categories: [],
-                    countries: []
-                };
-                
-                currentData.home.channels.push(channel);
-                currentData.api_info.total_channels++;
-                
-                // Ensure channel has actors and genres arrays (even if empty)
-                if (!channel.actors) channel.actors = [];
-                if (!channel.genres) channel.genres = [];
-            } else {
-                currentData.home.slides.push({
-                    id: content.id,
-                    title: content.title,
-                    type: content.type,
-                    image: content.image,
-                    url: `${content.type}s/${content.id}`,
-                    poster: content
-                });
-                
-                currentData.home.featuredMovies.push(content);
-                
-                // Ensure content has actors and genres arrays (even if empty)
-                if (!content.actors) content.actors = [];
-                if (!content.genres) content.genres = [];
-                
-                if (type === 'movie') {
-                    currentData.api_info.total_movies++;
-                } else {
-                    currentData.api_info.total_series++;
+            // Find the appropriate category and add the entry
+            let mainCategory = '';
+            if (type === 'movie') mainCategory = 'Movies';
+            else if (type === 'series') mainCategory = 'TV Series';
+            else if (type === 'live') mainCategory = 'Live TV';
+
+            const category = currentData.Categories.find(cat => cat.MainCategory === mainCategory);
+            if (category) {
+                // Add subcategory if it doesn't exist
+                if (!category.SubCategories.includes(subcategory)) {
+                    category.SubCategories.push(subcategory);
                 }
+                
+                category.Entries.push(entry);
+            } else {
+                // Create new category if it doesn't exist
+                currentData.Categories.push({
+                    MainCategory: mainCategory,
+                    SubCategories: [subcategory],
+                    Entries: [entry]
+                });
             }
 
             saveData();
             updateDataStats();
             updatePreview();
-            showStatus('success', `${type} added successfully!`);
+            showStatus('success', `${title} added to ${mainCategory} successfully!`);
             
             // Clear form
             document.getElementById('manual-title').value = '';
@@ -1717,6 +1731,7 @@
             document.getElementById('manual-image').value = '';
             document.getElementById('manual-year').value = '';
             document.getElementById('manual-rating').value = '';
+            document.getElementById('manual-country').value = '';
             
             // Reset sources to one empty item
             document.getElementById('manual-sources').innerHTML = `
@@ -1833,9 +1848,13 @@
             showStatus('success', `Generated ${generated} movies from selected genre!`);
         }
 
-        function isDuplicate(tmdbId, type) {
-            return currentData.home.featuredMovies.some(item => 
-                item.tmdb_id === tmdbId && item.type === type
+        function isDuplicate(title, type) {
+            const categoryName = type === 'movie' ? 'Movies' : 'TV Series';
+            const category = currentData.Categories.find(cat => cat.MainCategory === categoryName);
+            if (!category) return false;
+            
+            return category.Entries.some(entry => 
+                entry.Title.toLowerCase() === title.toLowerCase()
             );
         }
 
@@ -1854,31 +1873,19 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
                     
-                    // Validate data structure
-                    if (!importedData.home || !importedData.api_info) {
-                        throw new Error('Invalid data format');
+                    // Validate data structure for Categories format
+                    if (!importedData.Categories || !Array.isArray(importedData.Categories)) {
+                        throw new Error('Invalid data format - expected Categories array');
+                    }
+                    
+                    // Validate each category has required structure
+                    for (const category of importedData.Categories) {
+                        if (!category.MainCategory || !Array.isArray(category.SubCategories) || !Array.isArray(category.Entries)) {
+                            throw new Error('Invalid category structure');
+                        }
                     }
                     
                     currentData = importedData;
-                    
-                    // Update next ID to prevent conflicts
-                    let maxId = 0;
-                    const allItems = [
-                        ...(currentData.home.slides || []),
-                        ...(currentData.home.featuredMovies || []),
-                        ...(currentData.home.channels || [])
-                    ];
-                    
-                    allItems.forEach(item => {
-                        if (item.id > maxId) maxId = item.id;
-                        if (item.sources) {
-                            item.sources.forEach(source => {
-                                if (source.id > maxId) maxId = source.id;
-                            });
-                        }
-                    });
-                    
-                    nextId = maxId + 1;
                     
                     saveData();
                     updateDataStats();
@@ -1892,47 +1899,18 @@
             reader.readAsText(file);
         }
 
-                 function exportData() {
-             // Create the complete CineMax API structure with root-level movies array
-             // Limit slides to top-rated content (highest rating first)
-             const limitedSlides = (currentData.home.slides || [])
-                 .sort((a, b) => {
-                     const ratingA = a.poster?.rating || a.rating || 0;
-                     const ratingB = b.poster?.rating || b.rating || 0;
-                     return ratingB - ratingA; // Sort by highest rating first
-                 })
-                 .slice(0, 10); // Limit to top 10 highest rated items
-             
-             const exportData = {
-                 ...currentData,
-                 home: {
-                     ...currentData.home,
-                     slides: limitedSlides, // Use limited slides instead of all slides
-                     // Add featuredMovies INSIDE home object for LoadActivity compatibility
-                     featuredMovies: currentData.home.featuredMovies || [],
-                     // Add actors and genres INSIDE home object for HomeFragment compatibility
-                     actors: generateActorsFromContent() || [],
-                     genres: generateGenresFromContent() || []
-                 },
-                 // Add root-level movies array that includes both movies and series
-                 movies: currentData.home.featuredMovies || [],
-                 // Keep root-level arrays for other fragments compatibility
-                 actors: generateActorsFromContent() || [],
-                 genres: generateGenresFromContent() || [],
-                 // Ensure channels array is present
-                 channels: currentData.channels || []
-             };
-             
-             const dataStr = JSON.stringify(exportData, null, 2);
-             const dataBlob = new Blob([dataStr], { type: 'application/json' });
-             
-             const link = document.createElement('a');
-             link.href = URL.createObjectURL(dataBlob);
-             link.download = `cinemax-data-${new Date().toISOString().split('T')[0]}.json`;
-             link.click();
-             
-             showStatus('success', 'Data exported successfully with root-level movies array!');
-         }
+                                 function exportData() {
+            // Export the Categories structure directly
+            const dataStr = JSON.stringify(currentData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `playlist-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showStatus('success', 'Data exported successfully in Categories structure!');
+        }
 
                  function exportSample() {
              const sampleMovie = {
@@ -2072,22 +2050,25 @@
         function clearAllData() {
             if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
                 currentData = {
-                    api_info: {
-                        version: "2.0",
-                        description: "Enhanced CineMax API with TMDB Integration",
-                        last_updated: new Date().toISOString().split('T')[0],
-                        total_movies: 0,
-                        total_series: 0,
-                        total_channels: 0
-                    },
-                    home: {
-                        slides: [],
-                        featuredMovies: [],
-                        channels: []
-                    }
+                    Categories: [
+                        {
+                            MainCategory: "Live TV",
+                            SubCategories: ["Entertainment"],
+                            Entries: []
+                        },
+                        {
+                            MainCategory: "Movies", 
+                            SubCategories: ["Action", "Comedy", "Drama", "Horror", "Sci-Fi"],
+                            Entries: []
+                        },
+                        {
+                            MainCategory: "TV Series",
+                            SubCategories: ["Anime", "Action", "Comedy", "Drama"],
+                            Entries: []
+                        }
+                    ]
                 };
                 
-                nextId = 1;
                 saveData();
                 updateDataStats();
                 updatePreview();
@@ -2096,30 +2077,31 @@
         }
 
         function removeDuplicates() {
-            const originalCount = currentData.home.featuredMovies.length;
+            let originalCount = 0;
+            let removedCount = 0;
             
-            // Remove duplicates based on title and year
-            const seen = new Set();
-            currentData.home.featuredMovies = currentData.home.featuredMovies.filter(item => {
-                const key = `${item.title}-${item.year}-${item.type}`;
-                if (seen.has(key)) {
-                    return false;
-                }
-                seen.add(key);
-                return true;
+            // Remove duplicates from each category
+            currentData.Categories.forEach(category => {
+                originalCount += category.Entries.length;
+                
+                const seen = new Set();
+                const originalEntries = [...category.Entries];
+                category.Entries = category.Entries.filter(entry => {
+                    const key = `${entry.Title}-${entry.Year || 'Unknown'}`;
+                    if (seen.has(key)) {
+                        return false;
+                    }
+                    seen.add(key);
+                    return true;
+                });
+                
+                removedCount += originalEntries.length - category.Entries.length;
             });
-            
-            // Update slides to match
-            currentData.home.slides = currentData.home.slides.filter(slide => 
-                currentData.home.featuredMovies.some(movie => movie.id === slide.id)
-            );
-            
-            const removed = originalCount - currentData.home.featuredMovies.length;
             
             saveData();
             updateDataStats();
             updatePreview();
-            showStatus('success', `Removed ${removed} duplicate items!`);
+            showStatus('success', `Removed ${removedCount} duplicate items!`);
         }
 
         // Preview and management functions
@@ -2133,18 +2115,29 @@
             
             let items = [];
             
-            if (filter === 'all' || filter === 'movie' || filter === 'series') {
-                items = items.concat(currentData.home.featuredMovies.filter(item => 
-                    filter === 'all' || item.type === filter
-                ));
-            }
-            
-            if (filter === 'all' || filter === 'live') {
-                items = items.concat((currentData.home.channels || []).map(channel => ({
-                    ...channel,
-                    type: 'live'
-                })));
-            }
+            // Collect items from all categories based on filter
+            currentData.Categories.forEach(category => {
+                category.Entries.forEach(entry => {
+                    let itemType = '';
+                    if (category.MainCategory === "Movies") itemType = 'movie';
+                    else if (category.MainCategory === "TV Series") itemType = 'series';
+                    else if (category.MainCategory === "Live TV") itemType = 'live';
+                    
+                    if (filter === 'all' || filter === itemType) {
+                        items.push({
+                            ...entry,
+                            type: itemType,
+                            category: category.MainCategory,
+                            image: entry.Poster || entry.Thumbnail,
+                            title: entry.Title,
+                            description: entry.Description,
+                            year: entry.Year,
+                            rating: entry.Rating,
+                            sources: entry.Servers || []
+                        });
+                    }
+                });
+            });
             
             items.forEach(item => {
                 const div = document.createElement('div');
@@ -2156,10 +2149,11 @@
                     <div class="info">
                         <div class="title">${item.title}</div>
                         <div class="meta">${item.year || 'Unknown'} • ${item.type?.toUpperCase()} • Rating: ${item.rating || 'N/A'}</div>
-                        <div class="meta">Sources: ${item.sources?.length || 0}</div>
+                        <div class="meta">Category: ${item.category} • SubCategory: ${item.SubCategory || 'N/A'}</div>
+                        <div class="meta">Servers: ${item.sources?.length || 0}</div>
                         <div style="margin-top: 10px;">
-                            <button class="btn btn-secondary btn-small" onclick="editContent(${item.id})">Edit</button>
-                            <button class="btn btn-danger btn-small" onclick="deleteContent(${item.id}, '${item.type}')">Delete</button>
+                            <button class="btn btn-secondary btn-small" onclick="editContent('${item.Title}', '${item.category}')">Edit</button>
+                            <button class="btn btn-danger btn-small" onclick="deleteContent('${item.Title}', '${item.category}')">Delete</button>
                         </div>
                     </div>
                 `;
@@ -2168,12 +2162,20 @@
             });
         }
 
-        function editContent(id) {
+        function editContent(title, category) {
             // Find the content
-            let content = currentData.home.featuredMovies.find(item => item.id === id);
-            if (!content) {
-                content = (currentData.home.channels || []).find(item => item.id === id);
-            }
+            let content = null;
+            let foundCategory = null;
+            
+            currentData.Categories.forEach(cat => {
+                if (cat.MainCategory === category) {
+                    const entry = cat.Entries.find(e => e.Title === title);
+                    if (entry) {
+                        content = entry;
+                        foundCategory = cat;
+                    }
+                }
+            });
             
             if (!content) {
                 showStatus('error', 'Content not found');
@@ -2182,29 +2184,45 @@
             
             // Show edit modal (simplified version)
             const modal = document.getElementById('edit-modal');
+            if (!modal) {
+                // Create modal if it doesn't exist
+                const modalHTML = `
+                    <div id="edit-modal" class="modal">
+                        <div class="modal-content">
+                            <span class="close" onclick="closeEditModal()">&times;</span>
+                            <h2>Edit Content</h2>
+                            <div id="edit-form"></div>
+                            <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+            }
+            
             const form = document.getElementById('edit-form');
             
             form.innerHTML = `
                 <div class="form-group">
                     <label>Title</label>
-                    <input type="text" id="edit-title" value="${content.title}">
+                    <input type="text" id="edit-title" value="${content.Title}">
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea id="edit-description" rows="4">${content.description || ''}</textarea>
+                    <textarea id="edit-description" rows="4">${content.Description || ''}</textarea>
                 </div>
                 <div class="form-group">
                     <label>Year</label>
-                    <input type="text" id="edit-year" value="${content.year || ''}">
+                    <input type="text" id="edit-year" value="${content.Year || ''}">
                 </div>
                 <div class="form-group">
                     <label>Rating</label>
-                    <input type="number" id="edit-rating" min="0" max="10" step="0.1" value="${content.rating || ''}">
+                    <input type="number" id="edit-rating" min="0" max="10" step="0.1" value="${content.Rating || ''}">
                 </div>
-                <input type="hidden" id="edit-id" value="${id}">
+                <input type="hidden" id="edit-original-title" value="${title}">
+                <input type="hidden" id="edit-category" value="${category}">
             `;
             
-            modal.style.display = 'block';
+            document.getElementById('edit-modal').style.display = 'block';
         }
 
         function closeEditModal() {
@@ -2212,57 +2230,40 @@
         }
 
         function saveEdit() {
-            const id = parseInt(document.getElementById('edit-id').value);
-            const title = document.getElementById('edit-title').value;
+            const originalTitle = document.getElementById('edit-original-title').value;
+            const category = document.getElementById('edit-category').value;
+            const newTitle = document.getElementById('edit-title').value;
             const description = document.getElementById('edit-description').value;
             const year = document.getElementById('edit-year').value;
-            const rating = parseFloat(document.getElementById('edit-rating').value);
+            const rating = parseInt(document.getElementById('edit-rating').value);
             
             // Find and update content
-            let content = currentData.home.featuredMovies.find(item => item.id === id);
-            let isChannel = false;
-            
-            if (!content) {
-                content = (currentData.home.channels || []).find(item => item.id === id);
-                isChannel = true;
-            }
-            
-            if (content) {
-                content.title = title;
-                content.description = description;
-                content.year = year;
-                content.rating = rating;
-                
-                // Update corresponding slide
-                const slide = currentData.home.slides.find(s => s.id === id);
-                if (slide) {
-                    slide.title = title;
-                }
-                
-                saveData();
-                updatePreview();
-                closeEditModal();
-                showStatus('success', 'Content updated successfully!');
-            }
-        }
-
-        function deleteContent(id, type) {
-            if (confirm('Are you sure you want to delete this content?')) {
-                // Remove from featuredMovies or channels
-                if (type === 'live') {
-                    currentData.home.channels = (currentData.home.channels || []).filter(item => item.id !== id);
-                    currentData.api_info.total_channels--;
-                } else {
-                    currentData.home.featuredMovies = currentData.home.featuredMovies.filter(item => item.id !== id);
-                    if (type === 'movie') {
-                        currentData.api_info.total_movies--;
-                    } else {
-                        currentData.api_info.total_series--;
+            currentData.Categories.forEach(cat => {
+                if (cat.MainCategory === category) {
+                    const entry = cat.Entries.find(e => e.Title === originalTitle);
+                    if (entry) {
+                        entry.Title = newTitle;
+                        entry.Description = description;
+                        if (year) entry.Year = parseInt(year);
+                        entry.Rating = rating;
                     }
                 }
-                
-                // Remove from slides
-                currentData.home.slides = currentData.home.slides.filter(slide => slide.id !== id);
+            });
+            
+            saveData();
+            updatePreview();
+            closeEditModal();
+            showStatus('success', 'Content updated successfully!');
+        }
+
+        function deleteContent(title, category) {
+            if (confirm(`Are you sure you want to delete "${title}"?`)) {
+                // Remove from the appropriate category
+                currentData.Categories.forEach(cat => {
+                    if (cat.MainCategory === category) {
+                        cat.Entries = cat.Entries.filter(entry => entry.Title !== title);
+                    }
+                });
                 
                 saveData();
                 updateDataStats();
@@ -2273,14 +2274,20 @@
 
         // Utility functions
         function updateDataStats() {
-            const movieCount = currentData.home.featuredMovies.filter(item => item.type === 'movie').length;
-            const seriesCount = currentData.home.featuredMovies.filter(item => item.type === 'series').length;
-            const channelCount = (currentData.home.channels || []).length;
+            let movieCount = 0;
+            let seriesCount = 0;
+            let channelCount = 0;
             
-            currentData.api_info.total_movies = movieCount;
-            currentData.api_info.total_series = seriesCount;
-            currentData.api_info.total_channels = channelCount;
-            currentData.api_info.last_updated = new Date().toISOString().split('T')[0];
+            // Count entries in each category
+            currentData.Categories.forEach(category => {
+                if (category.MainCategory === "Movies") {
+                    movieCount += category.Entries.length;
+                } else if (category.MainCategory === "TV Series") {
+                    seriesCount += category.Entries.length;
+                } else if (category.MainCategory === "Live TV") {
+                    channelCount += category.Entries.length;
+                }
+            });
             
             // Update display
             if (document.getElementById('movie-count')) {
@@ -2322,57 +2329,50 @@
             }
         }
 
-                 function saveData() {
-             // Update root-level arrays for CineMax compatibility
-             const dataToSave = {
-                 ...currentData,
-                 movies: currentData.home.featuredMovies || [],
-                 actors: generateActorsFromContent(),
-                 genres: generateGenresFromContent()
-             };
-             
-             localStorage.setItem('cinemax-data', JSON.stringify(dataToSave));
-         }
+                                 function saveData() {
+            // Save Categories structure directly
+            localStorage.setItem('playlist-data', JSON.stringify(currentData));
+        }
 
         function loadSavedData() {
-            const saved = localStorage.getItem('cinemax-data');
+            // Try new playlist-data format first
+            let saved = localStorage.getItem('playlist-data');
+            if (!saved) {
+                // Fallback to old cinemax-data format
+                saved = localStorage.getItem('cinemax-data');
+            }
+            
             if (saved) {
                 try {
-                    currentData = JSON.parse(saved);
+                    const data = JSON.parse(saved);
                     
-                    // Find the highest ID to continue from
-                    let maxId = 0;
-                    const allItems = [
-                        ...(currentData.home.slides || []),
-                        ...(currentData.home.featuredMovies || []),
-                        ...(currentData.home.channels || [])
-                    ];
-                    
-                    allItems.forEach(item => {
-                        if (item.id > maxId) maxId = item.id;
-                        if (item.sources) {
-                            item.sources.forEach(source => {
-                                if (source.id > maxId) maxId = source.id;
-                            });
-                        }
-                        if (item.seasons) {
-                            item.seasons.forEach(season => {
-                                if (season.id > maxId) maxId = season.id;
-                                if (season.episodes) {
-                                    season.episodes.forEach(episode => {
-                                        if (episode.id > maxId) maxId = episode.id;
-                                        if (episode.sources) {
-                                            episode.sources.forEach(source => {
-                                                if (source.id > maxId) maxId = source.id;
-                                            });
-                                        }
-                                    });
+                    // Check if it's the new Categories format
+                    if (data.Categories && Array.isArray(data.Categories)) {
+                        currentData = data;
+                    } else {
+                        // Convert old format to new Categories format if needed
+                        console.log('Converting old format to Categories structure...');
+                        // For now, just use the default structure
+                        currentData = {
+                            Categories: [
+                                {
+                                    MainCategory: "Live TV",
+                                    SubCategories: ["Entertainment"],
+                                    Entries: []
+                                },
+                                {
+                                    MainCategory: "Movies", 
+                                    SubCategories: ["Action", "Comedy", "Drama", "Horror", "Sci-Fi"],
+                                    Entries: []
+                                },
+                                {
+                                    MainCategory: "TV Series",
+                                    SubCategories: ["Anime", "Action", "Comedy", "Drama"],
+                                    Entries: []
                                 }
-                            });
-                        }
-                    });
-                    
-                    nextId = maxId + 1;
+                            ]
+                        };
+                    }
                 } catch (error) {
                     console.error('Error loading saved data:', error);
                 }
