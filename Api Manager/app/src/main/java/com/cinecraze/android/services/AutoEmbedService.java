@@ -169,8 +169,89 @@ public class AutoEmbedService {
                 break;
         }
 
-        // If the configured base has placeholders, support them (but skip for TMDB-capable providers)
+        // Host-based mapping to exact patterns (from playlist.json)
         String host = getHostFromUrl(baseUrl);
+        String h = host == null ? "" : host.toLowerCase();
+        String domain = extractBaseDomain(baseUrl);
+        if (tmdbId != null && !h.isEmpty()) {
+            // VidSrc family
+            if (h.endsWith("vidsrc.net") || h.endsWith("vidsrc.to") || h.endsWith("vidsrc.me") || h.endsWith("vidsrc.xyz")) {
+                if (isMovie) return domain + "/embed/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
+            }
+            // VidJoy
+            if (h.endsWith("vidjoy.pro")) {
+                if (isMovie) return domain + "/embed/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
+            }
+            // MultiEmbed
+            if (h.endsWith("multiembed.mov")) {
+                if (isMovie) return domain + "/directstream.php?video_id=" + tmdbId + "&content_type=movie";
+                if (isSeries && season != null && episode != null) return domain + "/directstream.php?video_id=" + tmdbId + "&tmdb=1&s=" + season + "&e=" + episode;
+            }
+            // EmbedSU
+            if (h.endsWith("embed.su")) {
+                if (isMovie) return domain + "/embed/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
+            }
+            // AutoEmbed
+            if (h.endsWith("autoembed.cc") || h.endsWith("player.autoembed.cc")) {
+                if (isMovie) return domain + "/embed/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
+            }
+            // SmashyStream
+            if (h.endsWith("smashy.stream") || h.endsWith("player.smashy.stream")) {
+                if (isMovie) return domain + "/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/movie/" + tmdbId + "?s=" + season + "&e=" + episode;
+            }
+            // EmbedSoap
+            if (h.endsWith("embedsoap.com") || h.endsWith("www.embedsoap.com")) {
+                if (isMovie) return domain + "/embed/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
+            }
+            // MoviesAPI / DBGO
+            if (h.endsWith("moviesapi.club") || h.endsWith("dbgo.fun")) {
+                if (isMovie) return domain + "/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/movie/" + tmdbId + "?s=" + season + "&e=" + episode;
+            }
+            // FlixHQ / GoMovies
+            if (h.endsWith("flixhq.to") || h.endsWith("gomovies.sx")) {
+                if (isMovie) return domain + "/watch/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/watch/tv/" + tmdbId + "/" + season + "/" + episode;
+            }
+            // ShowBox / PrimeWire / HDToday / VidCloud
+            if (h.endsWith("showbox.media") || h.endsWith("www.showbox.media") || h.endsWith("primewire.mx") || h.endsWith("hdtoday.tv") || h.endsWith("vidcloud.to")) {
+                if (isMovie) return domain + "/embed/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
+            }
+            // StreamWish / DoodStream / StreamTape / MixDrop / FileMoon
+            if (h.endsWith("streamwish.to") || h.endsWith("doodstream.com") || h.endsWith("streamtape.com") || h.endsWith("mixdrop.co") || h.endsWith("filemoon.sx")) {
+                if (isMovie) return domain + "/e/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/e/" + tmdbId + "_s" + season + "e" + episode;
+            }
+            // UpStream
+            if (h.endsWith("upstream.to")) {
+                if (isMovie) return domain + "/embed-" + tmdbId + ".html";
+                if (isSeries && season != null && episode != null) return domain + "/embed-" + tmdbId + "s" + season + "e" + episode + ".html";
+            }
+            // GoDrivePlayer
+            if (h.endsWith("godriveplayer.com")) {
+                if (isMovie) return domain + "/embed/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/embed/" + tmdbId + "?s=" + season + "&e=" + episode;
+            }
+            // 2Embed
+            if (h.endsWith("2embed.cc")) {
+                if (isMovie) return domain + "/embed/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/embed/" + tmdbId + "?s=" + season + "&e=" + episode;
+            }
+            // VidLink
+            if (h.endsWith("vidlink.pro")) {
+                if (isMovie) return domain + "/movie/" + tmdbId;
+                if (isSeries && season != null && episode != null) return domain + "/movie/" + tmdbId + "?s=" + season + "&e=" + episode;
+            }
+        }
+
+        // If the configured base has placeholders, support them (but skip for TMDB-capable providers)
         if (baseUrl.contains("{") && !isTmdbCapableHost(host)) {
             String url = baseUrl.replace("{title}", encodedTitle);
             if (tmdbId != null) url = url.replace("{tmdb}", String.valueOf(tmdbId));
