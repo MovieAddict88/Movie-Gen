@@ -42,49 +42,85 @@ public class AutoEmbedService {
     }
 
     public List<String> generateAutoEmbedUrls(String title, List<ServerConfig> enabledServers) {
+        // Backward-compatible wrapper: build a temporary ContentItem
+        com.cinecraze.android.models.ContentItem temp = new com.cinecraze.android.models.ContentItem(title, "Movie");
+        return generateAutoEmbedUrls(temp, enabledServers);
+    }
+
+    public List<String> generateAutoEmbedUrls(com.cinecraze.android.models.ContentItem item, List<ServerConfig> enabledServers) {
         List<String> urls = new ArrayList<>();
-        
-        if (title == null || title.trim().isEmpty()) {
-            Log.w(TAG, "Title is null or empty");
-            return urls;
-        }
-        
+        if (item == null) return urls;
+
+        String title = item.getTitle();
+        if (title == null || title.trim().isEmpty()) return urls;
+
         String encodedTitle = URLEncoder.encode(title.trim(), StandardCharsets.UTF_8);
-        
+
         for (ServerConfig server : enabledServers) {
-            if (server.isEnabled()) {
-                String url = generateUrlForServer(server, encodedTitle);
-                if (url != null) {
-                    // Format: "ServerName|URL"
-                    urls.add(server.getName() + "|" + url);
-                }
+            if (!server.isEnabled()) continue;
+            String url = generateUrlForServer(server, item, encodedTitle);
+            if (url != null) {
+                urls.add(server.getName() + " 1080p|" + url);
             }
         }
-        
+
         Log.i(TAG, "Generated " + urls.size() + " auto-embed URLs for: " + title);
         return urls;
     }
 
-    private String generateUrlForServer(ServerConfig server, String encodedTitle) {
+    private String generateUrlForServer(ServerConfig server, com.cinecraze.android.models.ContentItem item, String encodedTitle) {
         String baseUrl = server.getBaseUrl();
         if (baseUrl == null || baseUrl.isEmpty()) {
             baseUrl = server.getRecommendedBaseUrl();
         }
-        
         if (baseUrl == null || baseUrl.isEmpty()) {
             Log.w(TAG, "No base URL for server: " + server.getName());
             return null;
         }
-        
+
         // Remove trailing slash if present
         if (baseUrl.endsWith("/")) {
             baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }
-        
-        switch (server.getName().toLowerCase()) {
+
+        String name = server.getName() == null ? "" : server.getName().toLowerCase();
+        Integer tmdbId = item.getTmdbId();
+        Integer season = item.getSeason();
+        Integer episode = item.getEpisode();
+        boolean isMovie = "Movie".equals(item.getType());
+        boolean isSeries = "TV Series".equals(item.getType());
+
+        // Prefer TMDB-based URLs for VidSrc family
+        switch (name) {
             case "vidsrc":
             case "vidsrc.to":
+            case "vidsrc.me":
+            case "vidsrc.xyz":
+                if (tmdbId != null) {
+                    if (isMovie) {
+                        return baseUrl + "/embed/movie?tmdb=" + tmdbId;
+                    } else if (isSeries) {
+                        if (season != null && episode != null) {
+                            return baseUrl + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                        }
+                        return baseUrl + "/embed/tv?tmdb=" + tmdbId;
+                    }
+                }
                 return baseUrl + "/embed/" + encodedTitle;
+            default:
+                break;
+        }
+
+        // If the configured base has placeholders, support them
+        if (baseUrl.contains("{")) {
+            String url = baseUrl.replace("{title}", encodedTitle);
+            if (tmdbId != null) url = url.replace("{tmdb}", String.valueOf(tmdbId));
+            if (season != null) url = url.replace("{season}", String.valueOf(season));
+            if (episode != null) url = url.replace("{episode}", String.valueOf(episode));
+            return url;
+        }
+
+        switch (name) {
             case "vidjoy":
                 return baseUrl + "/embed/" + encodedTitle;
             case "multiembed":
@@ -94,8 +130,6 @@ public class AutoEmbedService {
             case "autoembed.cc":
                 return baseUrl + "/embed/" + encodedTitle;
             case "smashystream":
-                return baseUrl + "/embed/" + encodedTitle;
-            case "vidsrc.xyz":
                 return baseUrl + "/embed/" + encodedTitle;
             case "embedsoap":
                 return baseUrl + "/embed/" + encodedTitle;
@@ -142,7 +176,6 @@ public class AutoEmbedService {
             case "cataz":
                 return baseUrl + "/embed/" + encodedTitle;
             default:
-                // Generic fallback
                 return baseUrl + "/embed/" + encodedTitle;
         }
     }

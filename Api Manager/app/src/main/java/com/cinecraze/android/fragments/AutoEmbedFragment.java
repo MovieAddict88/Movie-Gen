@@ -830,12 +830,8 @@ public class AutoEmbedFragment extends Fragment implements ServerAdapter.OnServe
         String title = item.getTitle();
         String encodedTitle = title.replace(" ", "%20");
         
-        for (ServerConfig config : serverConfigs) {
-            if (config.isEnabled()) {
-                String serverUrl = config.getUrl().replace("{title}", encodedTitle);
-                servers.add(config.getName() + " 1080p|" + serverUrl);
-            }
-        }
+        // Use AutoEmbedService to build URLs (uses TMDB/season/episode when available)
+        servers = autoEmbedService.generateAutoEmbedUrls(item, serverConfigs);
         
         // Preserve existing DRM servers if any
         if (item.getServers() != null) {

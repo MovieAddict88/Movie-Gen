@@ -761,7 +761,9 @@ public class TMDBService {
         try {
             if (dataManager != null) {
                 List<com.cinecraze.android.models.ServerConfig> enabled = dataManager.getEnabledServerConfigs();
-                servers = autoEmbedService.generateAutoEmbedUrls(title, enabled);
+                // Build a minimal ContentItem so auto-embed can use TMDB/season/episode if present later
+                com.cinecraze.android.models.ContentItem tmp = new com.cinecraze.android.models.ContentItem(title, "Movie");
+                servers = autoEmbedService.generateAutoEmbedUrls(tmp, enabled);
             } else {
                 // Fallback to previous behavior if DataManager not available (old constructor)
                 String encodedTitle = title.replace(" ", "%20");
