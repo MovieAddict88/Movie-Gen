@@ -256,6 +256,19 @@ public class AutoEmbedService {
                h.endsWith("vidjoy.pro");
     }
 
+    private String extractBaseDomain(String url) {
+        try {
+            if (url == null || url.isEmpty()) return url;
+            int schemeIdx = url.indexOf("://");
+            if (schemeIdx == -1) return url;
+            int slashIdx = url.indexOf('/', schemeIdx + 3);
+            if (slashIdx == -1) return url;
+            return url.substring(0, slashIdx);
+        } catch (Exception e) {
+            return url;
+        }
+    }
+
     public boolean checkServerStatus(String serverName) {
         return checkServerStatus(serverName, 3); // Default 3 retries
     }
