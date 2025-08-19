@@ -106,8 +106,9 @@ public class PreviewActivity extends AppCompatActivity implements PreviewAdapter
                     List<com.cinecraze.android.models.ServerConfig> enabled = dataManager.getEnabledServerConfigs();
                     List<String> servers = autoEmbedService.generateAutoEmbedUrls(item, enabled);
                     
-                    // Preserve existing servers and add new auto-embed servers
+                    // Preserve existing servers (drop placeholders), keep DRM, then add new auto-embed servers
                     List<String> existingServers = item.getServers() != null ? new ArrayList<>(item.getServers()) : new ArrayList<>();
+                    existingServers.removeIf(s -> s.contains("{"));
                     existingServers.addAll(servers);
                     item.setServers(existingServers);
                     
@@ -130,8 +131,9 @@ public class PreviewActivity extends AppCompatActivity implements PreviewAdapter
                         List<com.cinecraze.android.models.ServerConfig> enabled = dataManager.getEnabledServerConfigs();
                         List<String> servers = autoEmbedService.generateAutoEmbedUrls(item, enabled);
                         
-                        // Preserve existing servers and add new auto-embed servers
+                        // Preserve existing servers (drop placeholders), keep DRM, then add new auto-embed servers
                         List<String> existingServers = item.getServers() != null ? new ArrayList<>(item.getServers()) : new ArrayList<>();
+                        existingServers.removeIf(s -> s.contains("{"));
                         existingServers.addAll(servers);
                         item.setServers(existingServers);
                         
@@ -155,7 +157,11 @@ public class PreviewActivity extends AppCompatActivity implements PreviewAdapter
         }
         List<com.cinecraze.android.models.ServerConfig> enabled = dataManager.getEnabledServerConfigs();
         List<String> servers = autoEmbedService.generateAutoEmbedUrls(item, enabled);
-        item.setServers(servers);
+        // Replace existing list with cleaned + new servers
+        List<String> existingServers = item.getServers() != null ? new ArrayList<>(item.getServers()) : new ArrayList<>();
+        existingServers.removeIf(s -> s.contains("{"));
+        existingServers.addAll(servers);
+        item.setServers(existingServers);
         dataManager.updateContent(item);
         refreshList();
         Toast.makeText(this, "Servers added", Toast.LENGTH_SHORT).show();
@@ -218,7 +224,10 @@ public class PreviewActivity extends AppCompatActivity implements PreviewAdapter
                 String st = it.getSeriesTitle() != null && !it.getSeriesTitle().trim().isEmpty() ? it.getSeriesTitle() : extractSeriesTitle(it.getTitle());
                 if (seriesTitle.equals(st) && (it.getServers()==null || it.getServers().isEmpty())) {
                     List<String> servers = autoEmbedService.generateAutoEmbedUrls(it, enabled);
-                    it.setServers(servers);
+                    List<String> existingServers = it.getServers() != null ? new ArrayList<>(it.getServers()) : new ArrayList<>();
+                    existingServers.removeIf(s -> s.contains("{"));
+                    existingServers.addAll(servers);
+                    it.setServers(existingServers);
                     dataManager.updateContent(it);
                     updated++;
                 }
@@ -348,6 +357,7 @@ public class PreviewActivity extends AppCompatActivity implements PreviewAdapter
             if ("Movie".equals(item.getType())) {
                 List<String> servers = autoEmbedService.generateAutoEmbedUrls(item, enabled);
                 List<String> existingServers = item.getServers() != null ? new ArrayList<>(item.getServers()) : new ArrayList<>();
+                existingServers.removeIf(s -> s.contains("{"));
                 existingServers.addAll(servers);
                 item.setServers(existingServers);
                 dataManager.updateContent(item);
@@ -368,6 +378,7 @@ public class PreviewActivity extends AppCompatActivity implements PreviewAdapter
             if ("TV Series".equals(item.getType())) {
                 List<String> servers = autoEmbedService.generateAutoEmbedUrls(item, enabled);
                 List<String> existingServers = item.getServers() != null ? new ArrayList<>(item.getServers()) : new ArrayList<>();
+                existingServers.removeIf(s -> s.contains("{"));
                 existingServers.addAll(servers);
                 item.setServers(existingServers);
                 dataManager.updateContent(item);
@@ -388,6 +399,7 @@ public class PreviewActivity extends AppCompatActivity implements PreviewAdapter
             if ("Movie".equals(item.getType()) || "TV Series".equals(item.getType())) {
                 List<String> servers = autoEmbedService.generateAutoEmbedUrls(item, enabled);
                 List<String> existingServers = item.getServers() != null ? new ArrayList<>(item.getServers()) : new ArrayList<>();
+                existingServers.removeIf(s -> s.contains("{"));
                 existingServers.addAll(servers);
                 item.setServers(existingServers);
                 dataManager.updateContent(item);

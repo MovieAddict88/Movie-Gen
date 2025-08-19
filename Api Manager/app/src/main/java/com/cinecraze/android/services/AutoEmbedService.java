@@ -109,6 +109,62 @@ public class AutoEmbedService {
                     }
                 }
                 return baseDomain + "/embed/" + encodedTitle;
+            case "2embed.cc": {
+                String baseDomain2 = extractBaseDomain(baseUrl);
+                if (tmdbId != null) {
+                    if (isMovie) {
+                        return baseDomain2 + "/embed/movie?tmdb=" + tmdbId;
+                    } else if (isSeries) {
+                        if (season != null && episode != null) {
+                            return baseDomain2 + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                        }
+                        return baseDomain2 + "/embed/tv?tmdb=" + tmdbId;
+                    }
+                }
+                return baseDomain2 + "/embed/" + encodedTitle;
+            }
+            case "autoembed.cc": {
+                String baseDomain3 = extractBaseDomain(baseUrl);
+                if (tmdbId != null) {
+                    if (isMovie) {
+                        return baseDomain3 + "/embed/movie?tmdb=" + tmdbId;
+                    } else if (isSeries) {
+                        if (season != null && episode != null) {
+                            return baseDomain3 + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                        }
+                        return baseDomain3 + "/embed/tv?tmdb=" + tmdbId;
+                    }
+                }
+                return baseDomain3 + "/embed/" + encodedTitle;
+            }
+            case "embed.su": {
+                String baseDomain4 = extractBaseDomain(baseUrl);
+                if (tmdbId != null) {
+                    if (isMovie) {
+                        return baseDomain4 + "/embed/movie?tmdb=" + tmdbId;
+                    } else if (isSeries) {
+                        if (season != null && episode != null) {
+                            return baseDomain4 + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                        }
+                        return baseDomain4 + "/embed/tv?tmdb=" + tmdbId;
+                    }
+                }
+                return baseDomain4 + "/embed/" + encodedTitle;
+            }
+            case "vidjoy": {
+                String baseDomain5 = extractBaseDomain(baseUrl);
+                if (tmdbId != null) {
+                    if (isMovie) {
+                        return baseDomain5 + "/embed/movie?tmdb=" + tmdbId;
+                    } else if (isSeries) {
+                        if (season != null && episode != null) {
+                            return baseDomain5 + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                        }
+                        return baseDomain5 + "/embed/tv?tmdb=" + tmdbId;
+                    }
+                }
+                return baseDomain5 + "/embed/" + encodedTitle;
+            }
             default:
                 break;
         }
