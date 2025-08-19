@@ -90,6 +90,8 @@ public class AutoEmbedService {
         boolean isMovie = "Movie".equals(item.getType());
         boolean isSeries = "TV Series".equals(item.getType());
 
+
+
         // Prefer TMDB-based URLs for VidSrc family
         switch (name) {
             case "vidsrc":
@@ -260,6 +262,60 @@ public class AutoEmbedService {
             return url;
         }
 
+        // If we have TMDB ID, use it instead of title for all services
+        if (tmdbId != null) {
+            switch (name) {
+                case "vidjoy":
+                case "multiembed":
+                case "embed.su":
+                case "autoembed.cc":
+                case "smashystream":
+                case "embedsoap":
+                case "moviesapi.club":
+                case "dbgo.fun":
+                case "showbox.media":
+                case "primewire.mx":
+                case "hdtoday.tv":
+                case "vidcloud.to":
+                case "godriveplayer.com":
+                case "2embed.cc":
+                case "nontonfilm":
+                case "cataz":
+                    if (isMovie) return baseUrl + "/embed/movie/" + tmdbId;
+                    if (isSeries && season != null && episode != null) return baseUrl + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
+                    break;
+                case "flixhq.to":
+                case "gomovies.sx":
+                    if (isMovie) return baseUrl + "/watch/movie/" + tmdbId;
+                    if (isSeries && season != null && episode != null) return baseUrl + "/watch/tv/" + tmdbId + "/" + season + "/" + episode;
+                    break;
+                case "streamwish.to":
+                case "doodstream.com":
+                case "streamtape.com":
+                case "mixdrop.co":
+                case "filemoon.sx":
+                case "streamlare.com":
+                case "streamhub.to":
+                    if (isMovie) return baseUrl + "/e/" + tmdbId;
+                    if (isSeries && season != null && episode != null) return baseUrl + "/e/" + tmdbId + "_s" + season + "e" + episode;
+                    break;
+                case "upstream.to":
+                    if (isMovie) return baseUrl + "/embed-" + tmdbId + ".html";
+                    if (isSeries && season != null && episode != null) return baseUrl + "/embed-" + tmdbId + "s" + season + "e" + episode + ".html";
+                    break;
+                case "vidlink.pro":
+                    if (isMovie) return baseUrl + "/movie/" + tmdbId;
+                    if (isSeries && season != null && episode != null) return baseUrl + "/movie/" + tmdbId + "?s=" + season + "&e=" + episode;
+                    break;
+                default:
+                    if (isMovie) return baseUrl + "/embed/movie/" + tmdbId;
+                    if (isSeries && season != null && episode != null) return baseUrl + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
+                    break;
+            }
+        }
+
+        // Fallback to title-based URLs only when TMDB ID is not available
+        Log.w(TAG, "No TMDB ID available for " + item.getTitle() + ", using title-based URL");
         switch (name) {
             case "vidjoy":
                 return baseUrl + "/embed/" + encodedTitle;

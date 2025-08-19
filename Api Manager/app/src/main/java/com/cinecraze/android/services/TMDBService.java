@@ -345,13 +345,8 @@ public class TMDBService {
                         
                         // Generate auto-embed servers based on content type
                         List<String> servers;
-                        if ("TV Series".equals(contentType)) {
-                            // For TV series, generate servers for season 1 episode 1 by default
-                            servers = generateAutoEmbedServersForTV(contentItem.getTmdbId(), 1, 1);
-                        } else {
-                            // For movies
-                            servers = generateAutoEmbedServersForMovie(contentItem.getTmdbId());
-                        }
+                        // Generate servers using the ContentItem with TMDB ID
+                        servers = generateAutoEmbedServers(contentItem);
                         contentItem.setServers(servers);
                         
                         results.add(contentItem);
@@ -423,13 +418,8 @@ public class TMDBService {
                             
                             // Generate auto-embed servers based on content type
                             List<String> servers;
-                            if ("TV Series".equals(contentType)) {
-                                // For TV series, generate servers for season 1 episode 1 by default
-                                servers = generateAutoEmbedServersForTV(contentItem.getTmdbId(), 1, 1);
-                            } else {
-                                // For movies
-                                servers = generateAutoEmbedServersForMovie(contentItem.getTmdbId());
-                            }
+                            // Generate servers using the ContentItem with TMDB ID
+                            servers = generateAutoEmbedServers(contentItem);
                             contentItem.setServers(servers);
                             
                             Log.d(TAG, "Created content item: " + contentItem.getTitle() + " (TMDB ID: " + contentItem.getTmdbId() + ") with " + servers.size() + " servers");
@@ -617,7 +607,7 @@ public class TMDBService {
         }
         
         // Generate auto-embed servers based on enabled servers only
-        List<String> servers = generateAutoEmbedServers(movie.getTitle());
+        List<String> servers = generateAutoEmbedServers(movie);
         movie.setServers(servers);
         
         return movie;
@@ -684,9 +674,8 @@ public class TMDBService {
                                     item.setSeason(seasonNumber);
                                     item.setEpisode(episodeNumber);
                                     
-                                    // Generate servers for this episode using enabled server configs and series title
-                                    String episodeTitle = seriesTitle + " S" + String.format("%02d", seasonNumber) + "E" + String.format("%02d", episodeNumber);
-                                    List<String> servers = generateAutoEmbedServers(episodeTitle);
+                                    // Generate servers for this episode using enabled server configs with TMDB ID
+                                    List<String> servers = generateAutoEmbedServers(item);
                                     item.setServers(servers);
                                     
                                     seriesItems.add(item);
@@ -706,7 +695,7 @@ public class TMDBService {
                             fallback.setImageUrl(seriesPoster);
                             fallback.setSeason(seasonNumber);
                             fallback.setEpisode(1);
-                            fallback.setServers(generateAutoEmbedServersForTV(seriesId, seasonNumber, 1));
+                            fallback.setServers(generateAutoEmbedServers(fallback));
                             seriesItems.add(fallback);
                         }
                     }
@@ -767,6 +756,33 @@ public class TMDBService {
             } else {
                 // Fallback to previous behavior if DataManager not available (old constructor)
                 String encodedTitle = title.replace(" ", "%20");
+                servers.add("VidSrc 1080p|https://vidsrc.to/embed/" + encodedTitle);
+                servers.add("VidJoy 1080p|https://vidjoy.to/embed/" + encodedTitle);
+                servers.add("MultiEmbed 1080p|https://multiembed.mov/embed/" + encodedTitle);
+                servers.add("AutoEmbed 1080p|https://autoembed.cc/embed/" + encodedTitle);
+                servers.add("EmbedSU 1080p|https://embed.su/embed/" + encodedTitle);
+                servers.add("VidSrcME 1080p|https://vidsrc.me/embed/" + encodedTitle);
+                servers.add("FlixHQ 1080p|https://flixhq.to/watch/" + encodedTitle);
+                servers.add("HDToday 1080p|https://hdtoday.tv/embed/" + encodedTitle);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error generating servers from enabled configs: " + e.getMessage());
+        }
+        return servers;
+    }
+
+    // Overloaded method to accept ContentItem with TMDB ID
+    private List<String> generateAutoEmbedServers(ContentItem contentItem) {
+        List<String> servers = new ArrayList<>();
+        if (contentItem == null || contentItem.getTitle() == null || contentItem.getTitle().trim().isEmpty()) return servers;
+        try {
+            if (dataManager != null) {
+                List<com.cinecraze.android.models.ServerConfig> enabled = dataManager.getEnabledServerConfigs();
+                // Use the actual ContentItem with TMDB ID, season, episode info
+                servers = autoEmbedService.generateAutoEmbedUrls(contentItem, enabled);
+            } else {
+                // Fallback to previous behavior if DataManager not available (old constructor)
+                String encodedTitle = contentItem.getTitle().replace(" ", "%20");
                 servers.add("VidSrc 1080p|https://vidsrc.to/embed/" + encodedTitle);
                 servers.add("VidJoy 1080p|https://vidjoy.to/embed/" + encodedTitle);
                 servers.add("MultiEmbed 1080p|https://multiembed.mov/embed/" + encodedTitle);
