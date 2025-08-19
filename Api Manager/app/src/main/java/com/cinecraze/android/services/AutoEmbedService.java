@@ -114,10 +114,12 @@ public class AutoEmbedService {
                 String baseDomain2 = extractBaseDomain(baseUrl);
                 if (tmdbId != null) {
                     if (isMovie) {
-                        return baseDomain2 + "/embed/movie/" + tmdbId;
+                        // Movies: https://2embed.cc/embed/{tmdbId}
+                        return baseDomain2 + "/embed/" + tmdbId;
                     } else if (isSeries) {
+                        // TV: https://2embed.cc/embed/{tmdbId}?s={season}&e={episode}
                         if (season != null && episode != null) {
-                            return baseDomain2 + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
+                            return baseDomain2 + "/embed/" + tmdbId + "?s=" + season + "&e=" + episode;
                         }
                     }
                 }
