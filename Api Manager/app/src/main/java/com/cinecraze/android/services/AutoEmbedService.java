@@ -169,8 +169,9 @@ public class AutoEmbedService {
                 break;
         }
 
-        // If the configured base has placeholders, support them
-        if (baseUrl.contains("{")) {
+        // If the configured base has placeholders, support them (but skip for TMDB-capable providers)
+        String host = getHostFromUrl(baseUrl);
+        if (baseUrl.contains("{") && !isTmdbCapableHost(host)) {
             String url = baseUrl.replace("{title}", encodedTitle);
             if (tmdbId != null) url = url.replace("{tmdb}", String.valueOf(tmdbId));
             if (season != null) url = url.replace("{season}", String.valueOf(season));
@@ -236,6 +237,23 @@ public class AutoEmbedService {
             default:
                 return baseUrl + "/embed/" + encodedTitle;
         }
+    }
+
+    private String getHostFromUrl(String url) {
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            return uri.getHost();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private boolean isTmdbCapableHost(String host) {
+        if (host == null) return false;
+        String h = host.toLowerCase();
+        return h.endsWith("vidsrc.to") || h.endsWith("vidsrc.me") || h.endsWith("vidsrc.xyz") ||
+               h.endsWith("2embed.cc") || h.endsWith("autoembed.cc") || h.endsWith("embed.su") ||
+               h.endsWith("vidjoy.pro");
     }
 
     public boolean checkServerStatus(String serverName) {
