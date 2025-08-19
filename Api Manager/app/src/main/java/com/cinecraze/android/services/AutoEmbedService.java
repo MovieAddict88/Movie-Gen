@@ -624,7 +624,7 @@ public class AutoEmbedService {
     private String getBaseUrlForServer(String serverName) {
         switch (serverName.toLowerCase()) {
             case "vidsrc":
-                return "https://vidsrc.to";
+                return "https://vidsrc.net";
             case "vidjoy":
                 return "https://vidjoy.pro";
             case "multiembed":
@@ -675,6 +675,8 @@ public class AutoEmbedService {
                 return "https://2embed.cc";
             case "vidlink.pro":
                 return "https://vidlink.pro";
+            case "vidsrc.net":
+                return "https://vidsrc.net";
             default:
                 return null;
         }

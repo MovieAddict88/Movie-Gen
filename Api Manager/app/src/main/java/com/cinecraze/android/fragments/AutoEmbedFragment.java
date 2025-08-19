@@ -315,42 +315,45 @@ public class AutoEmbedFragment extends Fragment implements ServerAdapter.OnServe
         
         // Seed defaults on first run
         // Primary servers (high reliability)
-        serverConfigs.add(new ServerConfig("VidSrc", "https://vidsrc.to/embed/{title}", true, "High"));
-        serverConfigs.add(new ServerConfig("VidSrcME", "https://vidsrc.me/embed/{title}", true, "High"));
-        serverConfigs.add(new ServerConfig("VidSrcTO", "https://vidsrc.to/embed/{title}", true, "High"));
-        serverConfigs.add(new ServerConfig("EmbedSU", "https://embed.su/embed/{title}", true, "High"));
+        serverConfigs.add(new ServerConfig("VidSrc", "https://vidsrc.net/embed/{title}", true, "High"));
+        serverConfigs.add(new ServerConfig("VidSrc.me", "https://vidsrc.me/embed/{title}", true, "High"));
+        serverConfigs.add(new ServerConfig("VidSrc.to", "https://vidsrc.to/embed/{title}", true, "High"));
+        serverConfigs.add(new ServerConfig("VidSrc.xyz", "https://vidsrc.xyz/embed/{title}", true, "High"));
+        serverConfigs.add(new ServerConfig("Embed.su", "https://embed.su/embed/{title}", true, "High"));
         serverConfigs.add(new ServerConfig("VidJoy", "https://vidjoy.pro/embed/{title}", true, "High"));
-        
+        serverConfigs.add(new ServerConfig("AutoEmbed", "https://player.autoembed.cc/embed/{title}", true, "High"));
+        serverConfigs.add(new ServerConfig("SmashyStream", "https://player.smashy.stream/embed/{title}", true, "High"));
+
         // Secondary servers (good reliability)
         serverConfigs.add(new ServerConfig("MultiEmbed", "https://multiembed.mov/directstream.php?video_id={title}", true, "Medium"));
         serverConfigs.add(new ServerConfig("FlixHQ", "https://flixhq.to/watch/{title}", true, "Medium"));
         serverConfigs.add(new ServerConfig("HDToday", "https://hdtoday.tv/embed/{title}", true, "Medium"));
         serverConfigs.add(new ServerConfig("VidCloud", "https://vidcloud.to/embed/{title}", true, "Medium"));
-        
+
         // Additional servers
         serverConfigs.add(new ServerConfig("StreamWish", "https://streamwish.to/e/{title}", false, "Medium"));
         serverConfigs.add(new ServerConfig("MixDrop", "https://mixdrop.co/e/{title}", false, "Medium"));
         serverConfigs.add(new ServerConfig("FileMoon", "https://filemoon.sx/e/{title}", false, "Medium"));
-        serverConfigs.add(new ServerConfig("VidLink", "https://vidlink.pro/movie/{title}", false, "Medium"));
-        
+        serverConfigs.add(new ServerConfig("VidLink.pro", "https://vidlink.pro/movie/{title}", false, "Medium"));
+        serverConfigs.add(new ServerConfig("MoviesAPI.club", "https://moviesapi.club/movie/{title}", false, "Medium"));
+        serverConfigs.add(new ServerConfig("DBGO.fun", "https://dbgo.fun/movie/{title}", false, "Medium"));
+
         // Backup servers
         serverConfigs.add(new ServerConfig("StreamLare", "https://streamlare.com/e/{title}", false, "Low"));
         serverConfigs.add(new ServerConfig("StreamHub", "https://streamhub.to/e/{title}", false, "Low"));
         serverConfigs.add(new ServerConfig("DoodStream", "https://doodstream.com/e/{title}", false, "Low"));
         serverConfigs.add(new ServerConfig("UpStream", "https://upstream.to/{title}", false, "Low"));
-        
+
         // Alternative providers
         serverConfigs.add(new ServerConfig("StreamTape", "https://streamtape.com/e/{title}", false, "Low"));
         serverConfigs.add(new ServerConfig("GoDrivePlayer", "https://godriveplayer.com/embed/{title}", false, "Low"));
-        serverConfigs.add(new ServerConfig("TwoTwoEmbed", "https://2embed.cc/embed/{title}", false, "Low"));
+        serverConfigs.add(new ServerConfig("2Embed.cc", "https://2embed.cc/embed/{title}", false, "Low"));
         serverConfigs.add(new ServerConfig("EmbedSoap", "https://www.embedsoap.com/embed/{title}", false, "Low"));
-        
+
         // Regional servers
-        serverConfigs.add(new ServerConfig("NontonFilm", "https://tv.nontonguru.info/embed/{title}", false, "Medium"));
         serverConfigs.add(new ServerConfig("GoMovies", "https://gomovies.sx/watch/{title}", false, "Medium"));
         serverConfigs.add(new ServerConfig("ShowBox", "https://www.showbox.media/embed/{title}", false, "Medium"));
         serverConfigs.add(new ServerConfig("PrimeWire", "https://primewire.mx/embed/{title}", false, "Medium"));
-        serverConfigs.add(new ServerConfig("Cataz", "https://cataz.net/embed/{title}", false, "Medium"));
         
         serverAdapter.notifyDataSetChanged();
         
