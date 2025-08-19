@@ -96,17 +96,19 @@ public class AutoEmbedService {
             case "vidsrc.to":
             case "vidsrc.me":
             case "vidsrc.xyz":
+                // Always build from domain to avoid leftover path segments or placeholders
+                String baseDomain = extractBaseDomain(baseUrl);
                 if (tmdbId != null) {
                     if (isMovie) {
-                        return baseUrl + "/embed/movie?tmdb=" + tmdbId;
+                        return baseDomain + "/embed/movie?tmdb=" + tmdbId;
                     } else if (isSeries) {
                         if (season != null && episode != null) {
-                            return baseUrl + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                            return baseDomain + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
                         }
-                        return baseUrl + "/embed/tv?tmdb=" + tmdbId;
+                        return baseDomain + "/embed/tv?tmdb=" + tmdbId;
                     }
                 }
-                return baseUrl + "/embed/" + encodedTitle;
+                return baseDomain + "/embed/" + encodedTitle;
             default:
                 break;
         }
