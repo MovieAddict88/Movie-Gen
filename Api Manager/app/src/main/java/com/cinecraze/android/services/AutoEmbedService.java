@@ -102,12 +102,11 @@ public class AutoEmbedService {
                 String baseDomain = extractBaseDomain(baseUrl);
                 if (tmdbId != null) {
                     if (isMovie) {
-                        return baseDomain + "/embed/movie?tmdb=" + tmdbId;
+                        return baseDomain + "/embed/movie/" + tmdbId;
                     } else if (isSeries) {
                         if (season != null && episode != null) {
-                            return baseDomain + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                            return baseDomain + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
                         }
-                        return baseDomain + "/embed/tv?tmdb=" + tmdbId;
                     }
                 }
                 return baseDomain + "/embed/" + encodedTitle;
@@ -115,12 +114,13 @@ public class AutoEmbedService {
                 String baseDomain2 = extractBaseDomain(baseUrl);
                 if (tmdbId != null) {
                     if (isMovie) {
-                        return baseDomain2 + "/embed/movie?tmdb=" + tmdbId;
+                        // Movies: https://2embed.cc/embed/{tmdbId}
+                        return baseDomain2 + "/embed/" + tmdbId;
                     } else if (isSeries) {
+                        // TV: https://2embed.cc/embed/{tmdbId}?s={season}&e={episode}
                         if (season != null && episode != null) {
-                            return baseDomain2 + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                            return baseDomain2 + "/embed/" + tmdbId + "?s=" + season + "&e=" + episode;
                         }
-                        return baseDomain2 + "/embed/tv?tmdb=" + tmdbId;
                     }
                 }
                 return baseDomain2 + "/embed/" + encodedTitle;
@@ -129,12 +129,11 @@ public class AutoEmbedService {
                 String baseDomain3 = extractBaseDomain(baseUrl);
                 if (tmdbId != null) {
                     if (isMovie) {
-                        return baseDomain3 + "/embed/movie?tmdb=" + tmdbId;
+                        return baseDomain3 + "/embed/movie/" + tmdbId;
                     } else if (isSeries) {
                         if (season != null && episode != null) {
-                            return baseDomain3 + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                            return baseDomain3 + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
                         }
-                        return baseDomain3 + "/embed/tv?tmdb=" + tmdbId;
                     }
                 }
                 return baseDomain3 + "/embed/" + encodedTitle;
@@ -143,12 +142,11 @@ public class AutoEmbedService {
                 String baseDomain4 = extractBaseDomain(baseUrl);
                 if (tmdbId != null) {
                     if (isMovie) {
-                        return baseDomain4 + "/embed/movie?tmdb=" + tmdbId;
+                        return baseDomain4 + "/embed/movie/" + tmdbId;
                     } else if (isSeries) {
                         if (season != null && episode != null) {
-                            return baseDomain4 + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                            return baseDomain4 + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
                         }
-                        return baseDomain4 + "/embed/tv?tmdb=" + tmdbId;
                     }
                 }
                 return baseDomain4 + "/embed/" + encodedTitle;
@@ -157,12 +155,11 @@ public class AutoEmbedService {
                 String baseDomain5 = extractBaseDomain(baseUrl);
                 if (tmdbId != null) {
                     if (isMovie) {
-                        return baseDomain5 + "/embed/movie?tmdb=" + tmdbId;
+                        return baseDomain5 + "/embed/movie/" + tmdbId;
                     } else if (isSeries) {
                         if (season != null && episode != null) {
-                            return baseDomain5 + "/embed/tv?tmdb=" + tmdbId + "&season=" + season + "&episode=" + episode;
+                            return baseDomain5 + "/embed/tv/" + tmdbId + "/" + season + "/" + episode;
                         }
-                        return baseDomain5 + "/embed/tv?tmdb=" + tmdbId;
                     }
                 }
                 return baseDomain5 + "/embed/" + encodedTitle;
@@ -388,7 +385,7 @@ public class AutoEmbedService {
     private boolean isTmdbCapableHost(String host) {
         if (host == null) return false;
         String h = host.toLowerCase();
-        return h.endsWith("vidsrc.to") || h.endsWith("vidsrc.me") || h.endsWith("vidsrc.xyz") ||
+        return h.endsWith("vidsrc.net") || h.endsWith("vidsrc.to") || h.endsWith("vidsrc.me") || h.endsWith("vidsrc.xyz") ||
                h.endsWith("2embed.cc") || h.endsWith("autoembed.cc") || h.endsWith("embed.su") ||
                h.endsWith("vidjoy.pro");
     }
@@ -627,7 +624,7 @@ public class AutoEmbedService {
     private String getBaseUrlForServer(String serverName) {
         switch (serverName.toLowerCase()) {
             case "vidsrc":
-                return "https://vidsrc.to";
+                return "https://vidsrc.net";
             case "vidjoy":
                 return "https://vidjoy.pro";
             case "multiembed":
@@ -678,6 +675,8 @@ public class AutoEmbedService {
                 return "https://2embed.cc";
             case "vidlink.pro":
                 return "https://vidlink.pro";
+            case "vidsrc.net":
+                return "https://vidsrc.net";
             default:
                 return null;
         }
