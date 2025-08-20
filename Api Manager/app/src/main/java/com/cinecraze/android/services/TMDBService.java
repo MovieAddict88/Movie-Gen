@@ -617,7 +617,7 @@ public class TMDBService {
         }
         
         // Generate auto-embed servers based on enabled servers only
-        List<String> servers = generateAutoEmbedServers(movie.getTitle());
+        List<String> servers = generateAutoEmbedServers(movie);
         movie.setServers(servers);
         
         return movie;
@@ -685,8 +685,7 @@ public class TMDBService {
                                     item.setEpisode(episodeNumber);
                                     
                                     // Generate servers for this episode using enabled server configs and series title
-                                    String episodeTitle = seriesTitle + " S" + String.format("%02d", seasonNumber) + "E" + String.format("%02d", episodeNumber);
-                                    List<String> servers = generateAutoEmbedServers(episodeTitle);
+                                    List<String> servers = generateAutoEmbedServers(item);
                                     item.setServers(servers);
                                     
                                     seriesItems.add(item);
@@ -755,26 +754,13 @@ public class TMDBService {
         return "multi";
     }
 
-    private List<String> generateAutoEmbedServers(String title) {
+    private List<String> generateAutoEmbedServers(ContentItem item) {
         List<String> servers = new ArrayList<>();
-        if (title == null || title.trim().isEmpty()) return servers;
+        if (item == null) return servers;
         try {
             if (dataManager != null) {
                 List<com.cinecraze.android.models.ServerConfig> enabled = dataManager.getEnabledServerConfigs();
-                // Build a minimal ContentItem so auto-embed can use TMDB/season/episode if present later
-                com.cinecraze.android.models.ContentItem tmp = new com.cinecraze.android.models.ContentItem(title, "Movie");
-                servers = autoEmbedService.generateAutoEmbedUrls(tmp, enabled);
-            } else {
-                // Fallback to previous behavior if DataManager not available (old constructor)
-                String encodedTitle = title.replace(" ", "%20");
-                servers.add("VidSrc 1080p|https://vidsrc.to/embed/" + encodedTitle);
-                servers.add("VidJoy 1080p|https://vidjoy.to/embed/" + encodedTitle);
-                servers.add("MultiEmbed 1080p|https://multiembed.mov/embed/" + encodedTitle);
-                servers.add("AutoEmbed 1080p|https://autoembed.cc/embed/" + encodedTitle);
-                servers.add("EmbedSU 1080p|https://embed.su/embed/" + encodedTitle);
-                servers.add("VidSrcME 1080p|https://vidsrc.me/embed/" + encodedTitle);
-                servers.add("FlixHQ 1080p|https://flixhq.to/watch/" + encodedTitle);
-                servers.add("HDToday 1080p|https://hdtoday.tv/embed/" + encodedTitle);
+                servers = autoEmbedService.generateAutoEmbedUrls(item, enabled);
             }
         } catch (Exception e) {
             Log.w(TAG, "Error generating servers from enabled configs: " + e.getMessage());
